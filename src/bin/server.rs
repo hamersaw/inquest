@@ -34,6 +34,7 @@ impl InquestImpl {
 
 impl Inquest for InquestImpl {
     fn DescribeProbe(&self, request: DescribeProbeRequest) -> GrpcResult<DescribeProbeReply> {
+        //check for a probe id
         if !request.has_probe_id() {
             return Ok(inquest::describe_probe_reply_failure("request field probe_id is required"));
         }
