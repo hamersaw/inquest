@@ -1,7 +1,7 @@
 extern crate inquest;
 extern crate grpc;
 
-use inquest::inquest_pb::{ScheduleProbeRequest, ScheduleProbeReply};
+use inquest::inquest_pb::{ScheduleProbeRequest};
 use inquest::inquest_pb_grpc::{Inquest, InquestClient};
 
 fn main() {
