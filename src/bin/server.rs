@@ -7,12 +7,9 @@ use std::sync::{Arc, RwLock};
 use grpc::error::GrpcError;
 use grpc::result::GrpcResult;
 
-use inquest::inquest_pb::{CancelProbeRequest, CancelProbeReply};
-use inquest::inquest_pb::{DescribeProbeRequest, DescribeProbeReply};
-use inquest::inquest_pb::{GatherProbesRequest, GatherProbesReply};
-use inquest::inquest_pb::{ListProbeIdsRequest, ListProbeIdsReply};
+use inquest::inquest_pb::{CancelProbeRequest, DescribeProbeRequest, GatherProbesRequest, ListProbeIdsRequest, ScheduleProbeRequest};
+use inquest::inquest_pb::{CancelProbeReply, DescribeProbeReply, GatherProbesReply, ListProbeIdsReply, ScheduleProbeReply};
 use inquest::inquest_pb::{Probe};
-use inquest::inquest_pb::{ScheduleProbeRequest, ScheduleProbeReply};
 use inquest::inquest_pb_grpc::{Prober, ProberServer, Scheduler, SchedulerServer};
 
 fn main() {

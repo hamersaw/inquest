@@ -4,7 +4,6 @@ extern crate inquest;
 extern crate rustc_serialize;
 
 use docopt::Docopt;
-use inquest::inquest_pb::{CancelProbeRequest, DescribeProbeRequest, ListProbeIdsRequest, Probe, ScheduleProbeRequest};
 use inquest::inquest_pb_grpc::{Scheduler, SchedulerClient};
 
 const USAGE: &'static str = "
@@ -41,35 +40,22 @@ fn main() {
     let client = SchedulerClient::new("localhost", 12289).unwrap();
 
     if args.cmd_cancel {
-        let mut request = CancelProbeRequest::new();
-        request.set_probe_id(args.arg_probe_id);
+        let request = inquest::create_cancel_probe_request(&args.arg_probe_id);
         let response = client.CancelProbe(request);
 
         println!("response: {:?}", response);
     } else if args.cmd_describe {
-        let mut request = DescribeProbeRequest::new();
-        request.set_probe_id(args.arg_probe_id);
+        let request = inquest::create_describe_probe_request(&args.arg_probe_id);
         let response = client.DescribeProbe(request);
 
         println!("response: {:?}", response);
     } else if args.cmd_list {
-        let mut request = ListProbeIdsRequest::new();
-        if args.flag_priority.is_some() {
-            request.set_probe_priority(args.flag_priority.unwrap());
-        }
+        let request = inquest::create_list_probe_ids_request(args.flag_priority);
         let response = client.ListProbeIds(request);
 
         println!("response: {:?}", response);
     } else if args.cmd_schedule {
-        let mut probe = Probe::new();
-        probe.set_probe_id(args.arg_probe_id);
-        probe.set_host(args.arg_host);
-        if args.flag_priority.is_some() {
-            probe.set_probe_priority(args.flag_priority.unwrap());
-        }
-
-        let mut request = ScheduleProbeRequest::new();
-        request.set_probe(probe);
+        let request = inquest::create_schedule_probe_request(&args.arg_probe_id, &args.arg_host, args.flag_priority);
         let response = client.ScheduleProbe(request);
 
         println!("response: {:?}", response);

@@ -8,21 +8,39 @@ pub mod inquest_pb_grpc;
 
 use protobuf::RepeatedField;
 
-use inquest_pb::{CancelProbeRequest, CancelProbeReply};
-use inquest_pb::{DescribeProbeRequest, DescribeProbeReply};
-use inquest_pb::{GatherProbesRequest, GatherProbesReply};
-use inquest_pb::{ListProbeIdsRequest, ListProbeIdsReply};
+use inquest_pb::{CancelProbeRequest, DescribeProbeRequest, GatherProbesRequest, ListProbeIdsRequest, ScheduleProbeRequest};
+use inquest_pb::{CancelProbeReply, DescribeProbeReply, GatherProbesReply, ListProbeIdsReply, ScheduleProbeReply};
 use inquest_pb::{Probe};
-use inquest_pb::{ScheduleProbeRequest, ScheduleProbeReply};
+
+pub fn create_cancel_probe_request(probe_id: &str) -> CancelProbeRequest {
+    let mut request = CancelProbeRequest::new();
+    request.set_probe_id(probe_id.to_owned());
+    request
+}
 
 pub fn create_cancel_probe_reply() -> CancelProbeReply {
     CancelProbeReply::new()
+}
+
+pub fn create_describe_probe_request(probe_id: &str) -> DescribeProbeRequest {
+    let mut request = DescribeProbeRequest::new();
+    request.set_probe_id(probe_id.to_owned());
+    request
 }
 
 pub fn create_describe_probe_reply(probe: &Probe) -> DescribeProbeReply {
     let mut reply = DescribeProbeReply::new();
     reply.set_probe(probe.clone());
     reply
+}
+
+pub fn create_gather_probes_request(probe_priority: Option<i32>) -> GatherProbesRequest {
+    let mut request = GatherProbesRequest::new();
+    if probe_priority.is_some() {
+        request.set_probe_priority(probe_priority.unwrap());
+    }
+
+    request
 }
 
 pub fn create_gather_probes_reply(probes: Vec<&Probe>) -> GatherProbesReply {
@@ -36,6 +54,15 @@ pub fn create_gather_probes_reply(probes: Vec<&Probe>) -> GatherProbesReply {
     reply
 }
 
+pub fn create_list_probe_ids_request(probe_priority: Option<i32>) -> ListProbeIdsRequest {
+    let mut request = ListProbeIdsRequest::new();
+    if probe_priority.is_some() {
+        request.set_probe_priority(probe_priority.unwrap());
+    }
+
+    request
+}
+
 pub fn create_list_probe_ids_reply(probe_ids: Vec<&String>) -> ListProbeIdsReply {
     let mut repeated_field: RepeatedField<String> = RepeatedField::new();
     for probe_id in probe_ids {
@@ -45,6 +72,19 @@ pub fn create_list_probe_ids_reply(probe_ids: Vec<&String>) -> ListProbeIdsReply
     let mut reply = ListProbeIdsReply::new();
     reply.set_probe_id(repeated_field);
     reply
+}
+
+pub fn create_schedule_probe_request(probe_id: &str, host: &str, probe_priority: Option<i32>) -> ScheduleProbeRequest {
+    let mut probe = Probe::new();
+    probe.set_probe_id(probe_id.to_owned());
+    probe.set_host(host.to_owned());
+    if probe_priority.is_some() {
+        probe.set_probe_priority(probe_priority.unwrap());
+    }
+
+    let mut request = ScheduleProbeRequest::new();
+    request.set_probe(probe);
+    request
 }
 
 pub fn create_schedule_probe_reply() -> ScheduleProbeReply {
