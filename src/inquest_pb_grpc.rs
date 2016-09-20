@@ -21,10 +21,18 @@
 // interface
 
 pub trait Inquest {
+    fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::DescribeProbeReply>;
+
+    fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::ListProbeIdsReply>;
+
     fn ScheduleProbe(&self, p: super::inquest_pb::ScheduleProbeRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::ScheduleProbeReply>;
 }
 
 pub trait InquestAsync {
+    fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::DescribeProbeReply>;
+
+    fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::ListProbeIdsReply>;
+
     fn ScheduleProbe(&self, p: super::inquest_pb::ScheduleProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::ScheduleProbeReply>;
 }
 
@@ -45,6 +53,14 @@ impl InquestClient {
 }
 
 impl Inquest for InquestClient {
+    fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::DescribeProbeReply> {
+        ::futures::Future::wait(self.async_client.DescribeProbe(p))
+    }
+
+    fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::ListProbeIdsReply> {
+        ::futures::Future::wait(self.async_client.ListProbeIds(p))
+    }
+
     fn ScheduleProbe(&self, p: super::inquest_pb::ScheduleProbeRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::ScheduleProbeReply> {
         ::futures::Future::wait(self.async_client.ScheduleProbe(p))
     }
@@ -54,6 +70,8 @@ impl Inquest for InquestClient {
 
 pub struct InquestAsyncClient {
     grpc_client: ::grpc::client::GrpcClient,
+    method_DescribeProbe: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::DescribeProbeRequest, super::inquest_pb::DescribeProbeReply>>,
+    method_ListProbeIds: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::ListProbeIdsRequest, super::inquest_pb::ListProbeIdsReply>>,
     method_ScheduleProbe: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::ScheduleProbeRequest, super::inquest_pb::ScheduleProbeReply>>,
 }
 
@@ -62,6 +80,18 @@ impl InquestAsyncClient {
         ::grpc::client::GrpcClient::new(host, port).map(|c| {
             InquestAsyncClient {
                 grpc_client: c,
+                method_DescribeProbe: ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
+                    name: "/.Inquest/DescribeProbe".to_string(),
+                    streaming: ::grpc::method::GrpcStreaming::Unary,
+                    req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                    resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                }),
+                method_ListProbeIds: ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
+                    name: "/.Inquest/ListProbeIds".to_string(),
+                    streaming: ::grpc::method::GrpcStreaming::Unary,
+                    req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                    resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                }),
                 method_ScheduleProbe: ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
                     name: "/.Inquest/ScheduleProbe".to_string(),
                     streaming: ::grpc::method::GrpcStreaming::Unary,
@@ -74,6 +104,14 @@ impl InquestAsyncClient {
 }
 
 impl InquestAsync for InquestAsyncClient {
+    fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::DescribeProbeReply> {
+        self.grpc_client.call_unary(p, self.method_DescribeProbe.clone())
+    }
+
+    fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::ListProbeIdsReply> {
+        self.grpc_client.call_unary(p, self.method_ListProbeIds.clone())
+    }
+
     fn ScheduleProbe(&self, p: super::inquest_pb::ScheduleProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::ScheduleProbeReply> {
         self.grpc_client.call_unary(p, self.method_ScheduleProbe.clone())
     }
@@ -91,6 +129,20 @@ struct InquestServerHandlerToAsync {
 }
 
 impl InquestAsync for InquestServerHandlerToAsync {
+    fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::DescribeProbeReply> {
+        let h = self.handler.clone();
+        ::grpc::rt::sync_to_async_unary(&self.cpupool, p, move |p| {
+            h.DescribeProbe(p)
+        })
+    }
+
+    fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::ListProbeIdsReply> {
+        let h = self.handler.clone();
+        ::grpc::rt::sync_to_async_unary(&self.cpupool, p, move |p| {
+            h.ListProbeIds(p)
+        })
+    }
+
     fn ScheduleProbe(&self, p: super::inquest_pb::ScheduleProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::ScheduleProbeReply> {
         let h = self.handler.clone();
         ::grpc::rt::sync_to_async_unary(&self.cpupool, p, move |p| {
@@ -122,6 +174,30 @@ impl InquestAsyncServer {
         let handler_arc = ::std::sync::Arc::new(h);
         let service_definition = ::grpc::server::ServerServiceDefinition::new(
             vec![
+                ::grpc::server::ServerMethod::new(
+                    ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
+                        name: "/.Inquest/DescribeProbe".to_string(),
+                        streaming: ::grpc::method::GrpcStreaming::Unary,
+                        req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                        resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                    }),
+                    {
+                        let handler_copy = handler_arc.clone();
+                        ::grpc::server::MethodHandlerUnary::new(move |p| handler_copy.DescribeProbe(p))
+                    },
+                ),
+                ::grpc::server::ServerMethod::new(
+                    ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
+                        name: "/.Inquest/ListProbeIds".to_string(),
+                        streaming: ::grpc::method::GrpcStreaming::Unary,
+                        req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                        resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                    }),
+                    {
+                        let handler_copy = handler_arc.clone();
+                        ::grpc::server::MethodHandlerUnary::new(move |p| handler_copy.ListProbeIds(p))
+                    },
+                ),
                 ::grpc::server::ServerMethod::new(
                     ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
                         name: "/.Inquest/ScheduleProbe".to_string(),

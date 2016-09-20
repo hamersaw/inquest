@@ -5,6 +5,9 @@ use std::collections::HashMap;
 
 use grpc::result::GrpcResult;
 
+use inquest::inquest_pb::{DescribeProbeRequest, DescribeProbeReply};
+use inquest::inquest_pb::{ListProbeIdsRequest, ListProbeIdsReply};
+use inquest::inquest_pb::{Probe};
 use inquest::inquest_pb::{ScheduleProbeRequest, ScheduleProbeReply};
 use inquest::inquest_pb_grpc::{Inquest, InquestServer};
 
@@ -26,13 +29,17 @@ impl InquestImpl {
             probe_map: HashMap::new(),
         }
     }
-
-    pub fn contains_probe(&self, probe_id: &str) -> bool {
-        self.probe_map.contains_key(probe_id)
-    }
 }
 
 impl Inquest for InquestImpl {
+    fn DescribeProbe(&self, request: DescribeProbeRequest) -> GrpcResult<DescribeProbeReply> {
+        Ok(inquest::describe_probe_reply_failure("unimplemented"))
+    }
+
+    fn ListProbeIds(&self, request: ListProbeIdsRequest) -> GrpcResult<ListProbeIdsReply> {
+        Ok(inquest::list_probe_ids_reply_failure("unimplemented"))
+    }
+
     fn ScheduleProbe(&self, request: ScheduleProbeRequest) -> GrpcResult<ScheduleProbeReply> {
         //check for field 'probe'
         if !request.has_probe() {
@@ -49,11 +56,11 @@ impl Inquest for InquestImpl {
         let probe_id = probe.get_probe_id();
 
         //check if probe already exists
-        if self.contains_probe(probe_id) {
+        if self.probe_map.contains_key(probe_id) {
             return Ok(inquest::schedule_probe_reply_failure("probe id already exists"));
         }
 
-        //add probe to probe map
+        //TODO add probe to map
         //self.probe_map.insert(probe_id.to_owned(), request);
 
         Ok(inquest::schedule_probe_reply_success())

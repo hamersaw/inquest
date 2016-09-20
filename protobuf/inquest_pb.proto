@@ -1,45 +1,63 @@
 syntax="proto3";
 
-
 /**
  * probe messages
  */
 message Probe {
     string probe_id = 1;
-    int64 version_number = 2;
-
-    int64 start_time_seconds = 3;
-    int32 probe_interval_seconds = 4;
-    int32 probe_interval_post_failure_seconds = 5;
-    int32 declare_failure_after_x_attempts = 6;
+    int32 probe_priority = 2;
+    int64 version_number = 3;
 
     enum Protocol {
         HTTP = 0;
         HTTPS = 1;
     }
 
-    Protocol protocol = 7;
-    string host = 8;
-    int32 port = 9;
-    string test_url_suffix = 10; 
+    Protocol protocol = 4;
+    string host = 5;
+    int32 port = 6;
+    string test_url_suffix = 7; 
+
+    int64 start_time_seconds = 8;
+    int32 probe_interval_seconds = 9;
+    int32 probe_interval_post_failure_seconds = 10;
+    int32 declare_failure_after_x_attempts = 11;
 }
 
 /**
  * service definition
  */
 service Inquest {
+    rpc DescribeProbe(DescribeProbeRequest) returns (DescribeProbeReply) {}
+    rpc ListProbeIds(ListProbeIdsRequest) returns (ListProbeIdsReply) {}
     rpc ScheduleProbe(ScheduleProbeRequest)  returns (ScheduleProbeReply) {}
 }
 
 /**
  * service messages
  */
+message DescribeProbeRequest {
+    string probe_id = 1;
+}
+
+message DescribeProbeReply {
+    Probe probe = 1;
+    string error_msg = 2;
+}
+
+message ListProbeIdsRequest {
+    int32 probe_priority = 1;
+}
+
+message ListProbeIdsReply {
+    repeated string probe_id = 1;
+    string error_msg = 2;
+}
+
 message ScheduleProbeRequest {
-    repeated string prober_id = 1;
     Probe probe = 2;
 }
 
 message ScheduleProbeReply {
-    bool success = 1;
-    string error_msg = 2;
+    string error_msg = 1;
 }
