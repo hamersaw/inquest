@@ -12,29 +12,59 @@ use inquest::inquest_pb::{GatherProbesRequest, GatherProbesReply};
 use inquest::inquest_pb::{ListProbeIdsRequest, ListProbeIdsReply};
 use inquest::inquest_pb::{Probe};
 use inquest::inquest_pb::{ScheduleProbeRequest, ScheduleProbeReply};
-use inquest::inquest_pb_grpc::{Inquest, InquestServer};
+use inquest::inquest_pb_grpc::{Prober, ProberServer, Scheduler, SchedulerServer};
 
 fn main() {
-    let _server = InquestServer::new(12289, InquestImpl::new());
+    let probe_map = Arc::new(RwLock::new(HashMap::new()));
+    let _prober_server = ProberServer::new(52890, ProberImpl::new(probe_map.clone()));
+    let _scheduler_server = SchedulerServer::new(12289, SchedulerImpl::new(probe_map.clone()));
 
     loop {
         std::thread::park();
     }
 }
 
-struct InquestImpl {
+struct ProberImpl {
     probe_map: Arc<RwLock<HashMap<String, Probe>>>,
 }
 
-impl InquestImpl {
-    fn new() -> InquestImpl {
-        InquestImpl {
-            probe_map: Arc::new(RwLock::new(HashMap::new())),
+impl ProberImpl {
+    fn new(probe_map: Arc<RwLock<HashMap<String, Probe>>>) -> ProberImpl {
+        ProberImpl {
+            probe_map: probe_map,
         }
     }
 }
 
-impl Inquest for InquestImpl {
+impl Prober for ProberImpl {
+    fn GatherProbes(&self, request: GatherProbesRequest) -> GrpcResult<GatherProbesReply> {
+        let probe_priority = request.get_probe_priority(); //if request has no priority 0 is returned
+        
+        //get all the probes where probe has priority over what is provided
+        let probe_map = self.probe_map.read().unwrap();
+        let probes = probe_map.values()
+                .filter(|probe| {probe.get_probe_priority() >= probe_priority})
+                .map(|probe| {probe})
+                .collect::<Vec<_>>();
+
+        Ok(inquest::create_gather_probes_reply(probes))
+    }
+}
+
+struct SchedulerImpl {
+    probe_map: Arc<RwLock<HashMap<String, Probe>>>,
+}
+
+impl SchedulerImpl {
+    fn new(probe_map: Arc<RwLock<HashMap<String, Probe>>>) -> SchedulerImpl {
+        SchedulerImpl {
+            //probe_map: Arc::new(RwLock::new(HashMap::new())),
+            probe_map: probe_map,
+        }
+    }
+}
+
+impl Scheduler for SchedulerImpl {
     fn DescribeProbe(&self, request: DescribeProbeRequest) -> GrpcResult<DescribeProbeReply> {
         //check for a probe id
         if !request.has_probe_id() {
@@ -49,19 +79,6 @@ impl Inquest for InquestImpl {
         };
 
         Ok(inquest::create_describe_probe_reply(probe))
-    }
-
-    fn GatherProbes(&self, request: GatherProbesRequest) -> GrpcResult<GatherProbesReply> {
-        let probe_priority = request.get_probe_priority(); //if request has no priority 0 is returned
-        
-        //get all the probes where probe has priority over what is provided
-        let probe_map = self.probe_map.read().unwrap();
-        let probes = probe_map.values()
-                .filter(|probe| {probe.get_probe_priority() >= probe_priority})
-                .map(|probe| {probe})
-                .collect::<Vec<_>>();
-
-        Ok(inquest::create_gather_probes_reply(probes))
     }
 
     fn ListProbeIds(&self, request: ListProbeIdsRequest) -> GrpcResult<ListProbeIdsReply> {

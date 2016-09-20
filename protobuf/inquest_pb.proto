@@ -25,32 +25,20 @@ message Probe {
 }
 
 /**
- * service definition
+ * scheduler service definition
  */
-service Inquest {
+service Scheduler {
     rpc DescribeProbe(DescribeProbeRequest) returns (DescribeProbeReply) {}
-    rpc GatherProbes(GatherProbesRequest) returns (GatherProbesReply) {}
     rpc ListProbeIds(ListProbeIdsRequest) returns (ListProbeIdsReply) {}
     rpc ScheduleProbe(ScheduleProbeRequest)  returns (ScheduleProbeReply) {}
 }
 
-/**
- * client -> server messages
- */
 message DescribeProbeRequest {
     string probe_id = 1;
 }
 
 message DescribeProbeReply {
     Probe probe = 1;
-}
-
-message GatherProbesRequest {
-    int32 probe_priority = 1;
-}
-
-message GatherProbesReply {
-    repeated Probe probe = 1;
 }
 
 message ListProbeIdsRequest {
@@ -66,4 +54,19 @@ message ScheduleProbeRequest {
 }
 
 message ScheduleProbeReply {
+}
+
+/*
+ * prober service definition
+ */
+service Prober {
+    rpc GatherProbes(GatherProbesRequest) returns (GatherProbesReply) {}
+}
+
+message GatherProbesRequest {
+    int32 probe_priority = 1;
+}
+
+message GatherProbesReply {
+    repeated Probe probe = 1;
 }

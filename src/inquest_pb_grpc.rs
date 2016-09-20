@@ -20,20 +20,16 @@
 
 // interface
 
-pub trait Inquest {
+pub trait Scheduler {
     fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::DescribeProbeReply>;
-
-    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::GatherProbesReply>;
 
     fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::ListProbeIdsReply>;
 
     fn ScheduleProbe(&self, p: super::inquest_pb::ScheduleProbeRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::ScheduleProbeReply>;
 }
 
-pub trait InquestAsync {
+pub trait SchedulerAsync {
     fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::DescribeProbeReply>;
-
-    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GatherProbesReply>;
 
     fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::ListProbeIdsReply>;
 
@@ -42,27 +38,23 @@ pub trait InquestAsync {
 
 // sync client
 
-pub struct InquestClient {
-    async_client: InquestAsyncClient,
+pub struct SchedulerClient {
+    async_client: SchedulerAsyncClient,
 }
 
-impl InquestClient {
+impl SchedulerClient {
     pub fn new(host: &str, port: u16) -> ::grpc::result::GrpcResult<Self> {
-        InquestAsyncClient::new(host, port).map(|c| {
-            InquestClient {
+        SchedulerAsyncClient::new(host, port).map(|c| {
+            SchedulerClient {
                 async_client: c,
             }
         })
     }
 }
 
-impl Inquest for InquestClient {
+impl Scheduler for SchedulerClient {
     fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::DescribeProbeReply> {
         ::futures::Future::wait(self.async_client.DescribeProbe(p))
-    }
-
-    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::GatherProbesReply> {
-        ::futures::Future::wait(self.async_client.GatherProbes(p))
     }
 
     fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::ListProbeIdsReply> {
@@ -76,39 +68,32 @@ impl Inquest for InquestClient {
 
 // async client
 
-pub struct InquestAsyncClient {
+pub struct SchedulerAsyncClient {
     grpc_client: ::grpc::client::GrpcClient,
     method_DescribeProbe: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::DescribeProbeRequest, super::inquest_pb::DescribeProbeReply>>,
-    method_GatherProbes: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::GatherProbesRequest, super::inquest_pb::GatherProbesReply>>,
     method_ListProbeIds: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::ListProbeIdsRequest, super::inquest_pb::ListProbeIdsReply>>,
     method_ScheduleProbe: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::ScheduleProbeRequest, super::inquest_pb::ScheduleProbeReply>>,
 }
 
-impl InquestAsyncClient {
+impl SchedulerAsyncClient {
     pub fn new(host: &str, port: u16) -> ::grpc::result::GrpcResult<Self> {
         ::grpc::client::GrpcClient::new(host, port).map(|c| {
-            InquestAsyncClient {
+            SchedulerAsyncClient {
                 grpc_client: c,
                 method_DescribeProbe: ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
-                    name: "/.Inquest/DescribeProbe".to_string(),
-                    streaming: ::grpc::method::GrpcStreaming::Unary,
-                    req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
-                    resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
-                }),
-                method_GatherProbes: ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
-                    name: "/.Inquest/GatherProbes".to_string(),
+                    name: "/.Scheduler/DescribeProbe".to_string(),
                     streaming: ::grpc::method::GrpcStreaming::Unary,
                     req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                     resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                 }),
                 method_ListProbeIds: ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
-                    name: "/.Inquest/ListProbeIds".to_string(),
+                    name: "/.Scheduler/ListProbeIds".to_string(),
                     streaming: ::grpc::method::GrpcStreaming::Unary,
                     req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                     resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                 }),
                 method_ScheduleProbe: ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
-                    name: "/.Inquest/ScheduleProbe".to_string(),
+                    name: "/.Scheduler/ScheduleProbe".to_string(),
                     streaming: ::grpc::method::GrpcStreaming::Unary,
                     req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                     resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
@@ -118,13 +103,9 @@ impl InquestAsyncClient {
     }
 }
 
-impl InquestAsync for InquestAsyncClient {
+impl SchedulerAsync for SchedulerAsyncClient {
     fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::DescribeProbeReply> {
         self.grpc_client.call_unary(p, self.method_DescribeProbe.clone())
-    }
-
-    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GatherProbesReply> {
-        self.grpc_client.call_unary(p, self.method_GatherProbes.clone())
     }
 
     fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::ListProbeIdsReply> {
@@ -138,27 +119,20 @@ impl InquestAsync for InquestAsyncClient {
 
 // sync server
 
-pub struct InquestServer {
-    async_server: InquestAsyncServer,
+pub struct SchedulerServer {
+    async_server: SchedulerAsyncServer,
 }
 
-struct InquestServerHandlerToAsync {
-    handler: ::std::sync::Arc<Inquest + Send + Sync>,
+struct SchedulerServerHandlerToAsync {
+    handler: ::std::sync::Arc<Scheduler + Send + Sync>,
     cpupool: ::futures_cpupool::CpuPool,
 }
 
-impl InquestAsync for InquestServerHandlerToAsync {
+impl SchedulerAsync for SchedulerServerHandlerToAsync {
     fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::DescribeProbeReply> {
         let h = self.handler.clone();
         ::grpc::rt::sync_to_async_unary(&self.cpupool, p, move |p| {
             h.DescribeProbe(p)
-        })
-    }
-
-    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GatherProbesReply> {
-        let h = self.handler.clone();
-        ::grpc::rt::sync_to_async_unary(&self.cpupool, p, move |p| {
-            h.GatherProbes(p)
         })
     }
 
@@ -177,32 +151,32 @@ impl InquestAsync for InquestServerHandlerToAsync {
     }
 }
 
-impl InquestServer {
-    pub fn new<H : Inquest + Send + Sync + 'static>(port: u16, h: H) -> Self {
-        let h = InquestServerHandlerToAsync {
+impl SchedulerServer {
+    pub fn new<H : Scheduler + Send + Sync + 'static>(port: u16, h: H) -> Self {
+        let h = SchedulerServerHandlerToAsync {
             cpupool: ::futures_cpupool::CpuPool::new_num_cpus(),
             handler: ::std::sync::Arc::new(h),
         };
-        InquestServer {
-            async_server: InquestAsyncServer::new(port, h),
+        SchedulerServer {
+            async_server: SchedulerAsyncServer::new(port, h),
         }
     }
 }
 
 // async server
 
-pub struct InquestAsyncServer {
+pub struct SchedulerAsyncServer {
     grpc_server: ::grpc::server::GrpcServer,
 }
 
-impl InquestAsyncServer {
-    pub fn new<H : InquestAsync + 'static + Sync + Send + 'static>(port: u16, h: H) -> Self {
+impl SchedulerAsyncServer {
+    pub fn new<H : SchedulerAsync + 'static + Sync + Send + 'static>(port: u16, h: H) -> Self {
         let handler_arc = ::std::sync::Arc::new(h);
         let service_definition = ::grpc::server::ServerServiceDefinition::new(
             vec![
                 ::grpc::server::ServerMethod::new(
                     ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
-                        name: "/.Inquest/DescribeProbe".to_string(),
+                        name: "/.Scheduler/DescribeProbe".to_string(),
                         streaming: ::grpc::method::GrpcStreaming::Unary,
                         req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                         resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
@@ -214,19 +188,7 @@ impl InquestAsyncServer {
                 ),
                 ::grpc::server::ServerMethod::new(
                     ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
-                        name: "/.Inquest/GatherProbes".to_string(),
-                        streaming: ::grpc::method::GrpcStreaming::Unary,
-                        req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
-                        resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
-                    }),
-                    {
-                        let handler_copy = handler_arc.clone();
-                        ::grpc::server::MethodHandlerUnary::new(move |p| handler_copy.GatherProbes(p))
-                    },
-                ),
-                ::grpc::server::ServerMethod::new(
-                    ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
-                        name: "/.Inquest/ListProbeIds".to_string(),
+                        name: "/.Scheduler/ListProbeIds".to_string(),
                         streaming: ::grpc::method::GrpcStreaming::Unary,
                         req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                         resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
@@ -238,7 +200,7 @@ impl InquestAsyncServer {
                 ),
                 ::grpc::server::ServerMethod::new(
                     ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
-                        name: "/.Inquest/ScheduleProbe".to_string(),
+                        name: "/.Scheduler/ScheduleProbe".to_string(),
                         streaming: ::grpc::method::GrpcStreaming::Unary,
                         req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                         resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
@@ -250,7 +212,131 @@ impl InquestAsyncServer {
                 ),
             ],
         );
-        InquestAsyncServer {
+        SchedulerAsyncServer {
+            grpc_server: ::grpc::server::GrpcServer::new(port, service_definition),
+        }
+    }
+}
+
+// interface
+
+pub trait Prober {
+    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::GatherProbesReply>;
+}
+
+pub trait ProberAsync {
+    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GatherProbesReply>;
+}
+
+// sync client
+
+pub struct ProberClient {
+    async_client: ProberAsyncClient,
+}
+
+impl ProberClient {
+    pub fn new(host: &str, port: u16) -> ::grpc::result::GrpcResult<Self> {
+        ProberAsyncClient::new(host, port).map(|c| {
+            ProberClient {
+                async_client: c,
+            }
+        })
+    }
+}
+
+impl Prober for ProberClient {
+    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::GatherProbesReply> {
+        ::futures::Future::wait(self.async_client.GatherProbes(p))
+    }
+}
+
+// async client
+
+pub struct ProberAsyncClient {
+    grpc_client: ::grpc::client::GrpcClient,
+    method_GatherProbes: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::GatherProbesRequest, super::inquest_pb::GatherProbesReply>>,
+}
+
+impl ProberAsyncClient {
+    pub fn new(host: &str, port: u16) -> ::grpc::result::GrpcResult<Self> {
+        ::grpc::client::GrpcClient::new(host, port).map(|c| {
+            ProberAsyncClient {
+                grpc_client: c,
+                method_GatherProbes: ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
+                    name: "/.Prober/GatherProbes".to_string(),
+                    streaming: ::grpc::method::GrpcStreaming::Unary,
+                    req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                    resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                }),
+            }
+        })
+    }
+}
+
+impl ProberAsync for ProberAsyncClient {
+    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GatherProbesReply> {
+        self.grpc_client.call_unary(p, self.method_GatherProbes.clone())
+    }
+}
+
+// sync server
+
+pub struct ProberServer {
+    async_server: ProberAsyncServer,
+}
+
+struct ProberServerHandlerToAsync {
+    handler: ::std::sync::Arc<Prober + Send + Sync>,
+    cpupool: ::futures_cpupool::CpuPool,
+}
+
+impl ProberAsync for ProberServerHandlerToAsync {
+    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GatherProbesReply> {
+        let h = self.handler.clone();
+        ::grpc::rt::sync_to_async_unary(&self.cpupool, p, move |p| {
+            h.GatherProbes(p)
+        })
+    }
+}
+
+impl ProberServer {
+    pub fn new<H : Prober + Send + Sync + 'static>(port: u16, h: H) -> Self {
+        let h = ProberServerHandlerToAsync {
+            cpupool: ::futures_cpupool::CpuPool::new_num_cpus(),
+            handler: ::std::sync::Arc::new(h),
+        };
+        ProberServer {
+            async_server: ProberAsyncServer::new(port, h),
+        }
+    }
+}
+
+// async server
+
+pub struct ProberAsyncServer {
+    grpc_server: ::grpc::server::GrpcServer,
+}
+
+impl ProberAsyncServer {
+    pub fn new<H : ProberAsync + 'static + Sync + Send + 'static>(port: u16, h: H) -> Self {
+        let handler_arc = ::std::sync::Arc::new(h);
+        let service_definition = ::grpc::server::ServerServiceDefinition::new(
+            vec![
+                ::grpc::server::ServerMethod::new(
+                    ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
+                        name: "/.Prober/GatherProbes".to_string(),
+                        streaming: ::grpc::method::GrpcStreaming::Unary,
+                        req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                        resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                    }),
+                    {
+                        let handler_copy = handler_arc.clone();
+                        ::grpc::server::MethodHandlerUnary::new(move |p| handler_copy.GatherProbes(p))
+                    },
+                ),
+            ],
+        );
+        ProberAsyncServer {
             grpc_server: ::grpc::server::GrpcServer::new(port, service_definition),
         }
     }

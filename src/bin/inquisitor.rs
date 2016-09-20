@@ -5,7 +5,7 @@ extern crate rustc_serialize;
 
 use docopt::Docopt;
 use inquest::inquest_pb::{DescribeProbeRequest, ListProbeIdsRequest, Probe, ScheduleProbeRequest};
-use inquest::inquest_pb_grpc::{Inquest, InquestClient};
+use inquest::inquest_pb_grpc::{Scheduler, SchedulerClient};
 
 const USAGE: &'static str = "
 Client application to inquest
@@ -36,7 +36,7 @@ fn main() {
                         .and_then(|d| d.decode())
                         .unwrap_or_else(|e| e.exit());
 
-    let client = InquestClient::new("localhost", 12289).unwrap();
+    let client = SchedulerClient::new("localhost", 12289).unwrap();
 
     if args.cmd_describe {
         let mut request = DescribeProbeRequest::new();
