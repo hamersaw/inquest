@@ -1,5 +1,5 @@
-extern crate inquest;
 extern crate grpc;
+extern crate inquest;
 
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
