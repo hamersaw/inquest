@@ -13,7 +13,8 @@ Client application to inquest
 Usage:
     inquisitor describe <probe-id>
     inquisitor list [--priority=<priority>]
-    inquisitor schedule
+    inquisitor schedule <probe-id> <host> [--priority=<priority>]
+    inquisitor (-h | --help)
 
 Options:
     -h --help               Show this screen.
@@ -26,6 +27,7 @@ struct Args {
     cmd_list: bool,
     cmd_schedule: bool,
     arg_probe_id: String,
+    arg_host: String,
     flag_priority: Option<i32>,
 }
 
@@ -52,7 +54,11 @@ fn main() {
         println!("response: {:?}", response);
     } else if args.cmd_schedule {
         let mut probe = Probe::new();
-        probe.set_probe_id("TEST".to_owned());
+        probe.set_probe_id(args.arg_probe_id);
+        probe.set_host(args.arg_host);
+        if args.flag_priority.is_some() {
+            probe.set_probe_priority(args.flag_priority.unwrap());
+        }
 
         let mut request = ScheduleProbeRequest::new();
         request.set_probe(probe);

@@ -23,6 +23,8 @@
 pub trait Inquest {
     fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::DescribeProbeReply>;
 
+    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::GatherProbesReply>;
+
     fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::ListProbeIdsReply>;
 
     fn ScheduleProbe(&self, p: super::inquest_pb::ScheduleProbeRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::ScheduleProbeReply>;
@@ -30,6 +32,8 @@ pub trait Inquest {
 
 pub trait InquestAsync {
     fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::DescribeProbeReply>;
+
+    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GatherProbesReply>;
 
     fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::ListProbeIdsReply>;
 
@@ -57,6 +61,10 @@ impl Inquest for InquestClient {
         ::futures::Future::wait(self.async_client.DescribeProbe(p))
     }
 
+    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::GatherProbesReply> {
+        ::futures::Future::wait(self.async_client.GatherProbes(p))
+    }
+
     fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::ListProbeIdsReply> {
         ::futures::Future::wait(self.async_client.ListProbeIds(p))
     }
@@ -71,6 +79,7 @@ impl Inquest for InquestClient {
 pub struct InquestAsyncClient {
     grpc_client: ::grpc::client::GrpcClient,
     method_DescribeProbe: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::DescribeProbeRequest, super::inquest_pb::DescribeProbeReply>>,
+    method_GatherProbes: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::GatherProbesRequest, super::inquest_pb::GatherProbesReply>>,
     method_ListProbeIds: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::ListProbeIdsRequest, super::inquest_pb::ListProbeIdsReply>>,
     method_ScheduleProbe: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::ScheduleProbeRequest, super::inquest_pb::ScheduleProbeReply>>,
 }
@@ -82,6 +91,12 @@ impl InquestAsyncClient {
                 grpc_client: c,
                 method_DescribeProbe: ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
                     name: "/.Inquest/DescribeProbe".to_string(),
+                    streaming: ::grpc::method::GrpcStreaming::Unary,
+                    req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                    resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                }),
+                method_GatherProbes: ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
+                    name: "/.Inquest/GatherProbes".to_string(),
                     streaming: ::grpc::method::GrpcStreaming::Unary,
                     req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                     resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
@@ -106,6 +121,10 @@ impl InquestAsyncClient {
 impl InquestAsync for InquestAsyncClient {
     fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::DescribeProbeReply> {
         self.grpc_client.call_unary(p, self.method_DescribeProbe.clone())
+    }
+
+    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GatherProbesReply> {
+        self.grpc_client.call_unary(p, self.method_GatherProbes.clone())
     }
 
     fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::ListProbeIdsReply> {
@@ -133,6 +152,13 @@ impl InquestAsync for InquestServerHandlerToAsync {
         let h = self.handler.clone();
         ::grpc::rt::sync_to_async_unary(&self.cpupool, p, move |p| {
             h.DescribeProbe(p)
+        })
+    }
+
+    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GatherProbesReply> {
+        let h = self.handler.clone();
+        ::grpc::rt::sync_to_async_unary(&self.cpupool, p, move |p| {
+            h.GatherProbes(p)
         })
     }
 
@@ -184,6 +210,18 @@ impl InquestAsyncServer {
                     {
                         let handler_copy = handler_arc.clone();
                         ::grpc::server::MethodHandlerUnary::new(move |p| handler_copy.DescribeProbe(p))
+                    },
+                ),
+                ::grpc::server::ServerMethod::new(
+                    ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
+                        name: "/.Inquest/GatherProbes".to_string(),
+                        streaming: ::grpc::method::GrpcStreaming::Unary,
+                        req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                        resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                    }),
+                    {
+                        let handler_copy = handler_arc.clone();
+                        ::grpc::server::MethodHandlerUnary::new(move |p| handler_copy.GatherProbes(p))
                     },
                 ),
                 ::grpc::server::ServerMethod::new(
