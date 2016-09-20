@@ -8,11 +8,16 @@ pub mod inquest_pb_grpc;
 
 use protobuf::RepeatedField;
 
+use inquest_pb::{CancelProbeRequest, CancelProbeReply};
 use inquest_pb::{DescribeProbeRequest, DescribeProbeReply};
 use inquest_pb::{GatherProbesRequest, GatherProbesReply};
 use inquest_pb::{ListProbeIdsRequest, ListProbeIdsReply};
 use inquest_pb::{Probe};
 use inquest_pb::{ScheduleProbeRequest, ScheduleProbeReply};
+
+pub fn create_cancel_probe_reply() -> CancelProbeReply {
+    CancelProbeReply::new()
+}
 
 pub fn create_describe_probe_reply(probe: &Probe) -> DescribeProbeReply {
     let mut reply = DescribeProbeReply::new();

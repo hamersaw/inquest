@@ -4,13 +4,14 @@ extern crate inquest;
 extern crate rustc_serialize;
 
 use docopt::Docopt;
-use inquest::inquest_pb::{DescribeProbeRequest, ListProbeIdsRequest, Probe, ScheduleProbeRequest};
+use inquest::inquest_pb::{CancelProbeRequest, DescribeProbeRequest, ListProbeIdsRequest, Probe, ScheduleProbeRequest};
 use inquest::inquest_pb_grpc::{Scheduler, SchedulerClient};
 
 const USAGE: &'static str = "
 Client application to inquest
 
 Usage:
+    inquisitor cancel <probe-id>
     inquisitor describe <probe-id>
     inquisitor list [--priority=<priority>]
     inquisitor schedule <probe-id> <host> [--priority=<priority>]
@@ -23,6 +24,7 @@ Options:
 
 #[derive(Debug, RustcDecodable)]
 struct Args {
+    cmd_cancel: bool,
     cmd_describe: bool,
     cmd_list: bool,
     cmd_schedule: bool,
@@ -38,7 +40,13 @@ fn main() {
 
     let client = SchedulerClient::new("localhost", 12289).unwrap();
 
-    if args.cmd_describe {
+    if args.cmd_cancel {
+        let mut request = CancelProbeRequest::new();
+        request.set_probe_id(args.arg_probe_id);
+        let response = client.CancelProbe(request);
+
+        println!("response: {:?}", response);
+    } else if args.cmd_describe {
         let mut request = DescribeProbeRequest::new();
         request.set_probe_id(args.arg_probe_id);
         let response = client.DescribeProbe(request);

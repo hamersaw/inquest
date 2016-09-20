@@ -7,6 +7,7 @@ use std::sync::{Arc, RwLock};
 use grpc::error::GrpcError;
 use grpc::result::GrpcResult;
 
+use inquest::inquest_pb::{CancelProbeRequest, CancelProbeReply};
 use inquest::inquest_pb::{DescribeProbeRequest, DescribeProbeReply};
 use inquest::inquest_pb::{GatherProbesRequest, GatherProbesReply};
 use inquest::inquest_pb::{ListProbeIdsRequest, ListProbeIdsReply};
@@ -65,13 +66,28 @@ impl SchedulerImpl {
 }
 
 impl Scheduler for SchedulerImpl {
+    fn CancelProbe(&self, request: CancelProbeRequest) -> GrpcResult<CancelProbeReply> {
+        //check for a probe id
+        if !request.has_probe_id() {
+            return Err(GrpcError::Other("request field probe_id is required"));
+        }
+
+        //remove probe if exists
+        let mut probe_map = self.probe_map.write().unwrap();
+        if probe_map.remove(request.get_probe_id()).is_none() {
+            return Err(GrpcError::Other("probe does not exist"));
+        }
+
+        Ok(inquest::create_cancel_probe_reply())
+    }
+
     fn DescribeProbe(&self, request: DescribeProbeRequest) -> GrpcResult<DescribeProbeReply> {
         //check for a probe id
         if !request.has_probe_id() {
             return Err(GrpcError::Other("request field probe_id is required"));
         }
 
-        //check if probe exists
+        //retrieve probe if exists
         let probe_map = self.probe_map.read().unwrap();
         let probe = match probe_map.get(request.get_probe_id()) {
             Some(probe) => probe,

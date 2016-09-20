@@ -28,9 +28,17 @@ message Probe {
  * scheduler service definition
  */
 service Scheduler {
+    rpc CancelProbe(CancelProbeRequest) returns (CancelProbeReply) {}
     rpc DescribeProbe(DescribeProbeRequest) returns (DescribeProbeReply) {}
     rpc ListProbeIds(ListProbeIdsRequest) returns (ListProbeIdsReply) {}
     rpc ScheduleProbe(ScheduleProbeRequest)  returns (ScheduleProbeReply) {}
+}
+
+message CancelProbeRequest {
+    string probe_id = 1;
+}
+
+message CancelProbeReply {
 }
 
 message DescribeProbeRequest {
