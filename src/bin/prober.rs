@@ -201,15 +201,24 @@ impl ThreadPoolProberImpl {
             }
         }
 
-        //schedule probe
+        //add probe to probe jobs
         probe_jobs.push(ProbeJob::new(time::now_utc(), probe.to_owned()));
         Ok(())
     }
 
     fn cancel_probe(&self, probe_id: &str) -> Result<(), &str> {
+        //loop through probe jobs removing the probe_id
         let mut probe_jobs = self.probe_jobs.write().unwrap();
-        //TODO remove probe_id from probe jobs
-        unimplemented!();
+        let mut _probe_jobs = BinaryHeap::new();
+        for probe_job in probe_jobs.drain() {
+            if probe_job.probe.get_probe_id() != probe_id {
+                _probe_jobs.push(probe_job);
+            }
+        }
+
+        //retain correct probe jobs
+        probe_jobs.append(&mut _probe_jobs);
+        Ok(())
     }
 
     fn get_probe_ids(&self) -> Vec<String> {
