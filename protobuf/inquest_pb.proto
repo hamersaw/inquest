@@ -65,16 +65,18 @@ message ScheduleProbeReply {
 }
 
 /*
- * prober service definition
+ * probe cache service definition
  */
-service Prober {
+service ProbeCache {
     rpc GatherProbes(GatherProbesRequest) returns (GatherProbesReply) {}
 }
 
 message GatherProbesRequest {
     int32 probe_priority = 1;
+    repeated string scheduled_probe_id = 2;
 }
 
 message GatherProbesReply {
     repeated Probe probe = 1;
+    repeated string cancel_probe_id = 2;
 }
