@@ -245,8 +245,7 @@ impl ProbeJob {
     }
 
     fn execute(&self) -> Result<(), &str> {
-        println!("TODO execute probe");
-        //TODO execute probe
+        println!("TODO execute probe: {:?}", self.probe);
         Ok(())
     }
 
