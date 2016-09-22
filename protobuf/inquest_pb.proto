@@ -16,12 +16,37 @@ message Probe {
     Protocol protocol = 4;
     string host = 5;
     int32 port = 6;
-    string test_url_suffix = 7; 
+    string url_suffix = 7; 
 
     int64 start_time_seconds = 8;
     int32 probe_interval_seconds = 9;
     int32 probe_interval_post_failure_seconds = 10;
-    int32 declare_failure_after_x_attempts = 11;
+    int32 attempts_to_declare_failure = 11;
+}
+
+message ProbeResult {
+    string probe_id = 1;
+    int64 version_number = 2;
+    
+    bytes prober_ip_bytes = 3;
+    string prober_ip_string = 4;
+    string prober_hostname = 5;
+
+    int64 timestamp_ns = 6;
+    int64 application_layer_latency_ns = 7;
+    int32 http_error_code = 8;
+    string http_error_msg = 9;
+    int32 application_bytes_sent = 10;
+    int32 application_bytes_received = 11;
+
+    /*
+    int64 probe attempt number
+    string request/reply content
+    string dns_actual
+    repeated ip_address
+    repeated_ip_address_bytes
+    int32 last_ip_address_attempted
+    */
 }
 
 /**
