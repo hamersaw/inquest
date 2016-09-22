@@ -10,7 +10,7 @@ use protobuf::RepeatedField;
 
 use inquest_pb::{CancelProbeRequest, DescribeProbeRequest, GatherProbesRequest, ListProbeIdsRequest, ScheduleProbeRequest};
 use inquest_pb::{CancelProbeReply, DescribeProbeReply, GatherProbesReply, ListProbeIdsReply, ScheduleProbeReply};
-use inquest_pb::Probe;
+use inquest_pb::{Probe, Probe_Protocol};
 
 pub fn create_cancel_probe_request(probe_id: &str) -> CancelProbeRequest {
     let mut request = CancelProbeRequest::new();
@@ -87,10 +87,26 @@ pub fn create_list_probe_ids_reply(probe_ids: Vec<String>) -> ListProbeIdsReply 
     reply
 }
 
-pub fn create_schedule_probe_request(probe_id: &str, host: &str, probe_interval_seconds: Option<i32>, probe_priority: Option<i32>) -> ScheduleProbeRequest {
+pub fn create_schedule_probe_request(probe_id: &str, http: bool, https: bool, host: &str, url_suffix: Option<String>, probe_interval_seconds: Option<i32>, probe_priority: Option<i32>) -> ScheduleProbeRequest {
     let mut probe = Probe::new();
     probe.set_probe_id(probe_id.to_owned());
+    probe.set_protocol(
+            if http {
+                Probe_Protocol::HTTP
+            } else if https {
+                Probe_Protocol::HTTPS
+            } else {
+                Probe_Protocol::HTTP
+            }
+        );
+
     probe.set_host(host.to_owned());
+    probe.set_url_suffix(
+            match url_suffix {
+                Some(url_suffix) => url_suffix,
+                None => "index.html".to_owned(),
+            }
+        );
 
     if probe_interval_seconds.is_some() {
         probe.set_probe_interval_seconds(probe_interval_seconds.unwrap());

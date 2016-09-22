@@ -1,19 +1,20 @@
 #[macro_use]
 extern crate chan;
 extern crate inquest;
+extern crate hyper;
 extern crate threadpool;
 extern crate time;
 extern crate toml;
 
 use std::cmp::{Ordering, PartialOrd};
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::BinaryHeap;
 use std::fs::File;
 use std::io::Read;
-use std::ops::Add;
-use std::sync::{Arc, Mutex, RwLock};
+use std::ops::{Add, Sub};
+use std::sync::{Arc, RwLock};
 
-use chan::Sender;
-use inquest::inquest_pb::Probe;
+use hyper::Client;
+use inquest::inquest_pb::{Probe, Probe_Protocol};
 use inquest::inquest_pb_grpc::{ProbeCache, ProbeCacheClient};
 use threadpool::ThreadPool;
 use time::{Duration, Tm};
@@ -149,7 +150,7 @@ impl ThreadPoolProberImpl {
         }
 
         //add probe to probe jobs
-        probe_jobs.push(ProbeJob::new(time::now_utc(), probe.to_owned()));
+        probe_jobs.push(ProbeJob::new(probe.to_owned()));
         Ok(())
     }
 
@@ -184,15 +185,51 @@ struct ProbeJob {
 }
 
 impl ProbeJob {
-    fn new(next_execution_time: Tm, probe: Probe) -> ProbeJob {
+    fn new(probe: Probe) -> ProbeJob {
         ProbeJob {
-            next_execution_time: next_execution_time,
+            next_execution_time: time::now_utc(),
             probe: probe,
         }
     }
 
     fn execute(&self) -> Result<(), &str> {
-        println!("TODO execute probe: {:?}", self.probe);
+        let client = Client::new();
+
+        //format the url
+        let url = format!("{}://{}/{}",
+                match self.probe.get_protocol() {
+                    Probe_Protocol::HTTP => "http",
+                    Probe_Protocol::HTTPS => "https",
+                },
+                self.probe.get_host(),
+                self.probe.get_url_suffix()
+            );
+
+        //submit request
+        let start_time = time::now_utc();
+        let response = client.get(&url).send();
+        let execution_time = time::now_utc().sub(start_time); //TODO execution time
+
+        //parse response
+        match response {
+            Ok(response) => {
+                {
+                    //populate http status codes and message
+                    let status_raw = response.status_raw(); //TODO status code and message
+                }
+
+                {
+                    //populate application byte counts
+                    let byte_count = response.bytes().count(); //TODO application bytes
+                }
+
+                println!("response: {:?}", response);
+            },
+            Err(e) => {
+                println!("failed request");
+            },
+        }
+
         Ok(())
     }
 

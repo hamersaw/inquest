@@ -13,11 +13,13 @@ Usage:
     inquisitor cancel <probe-id>
     inquisitor describe <probe-id>
     inquisitor list [--priority=<priority>]
-    inquisitor schedule <probe-id> <host> [--interval=<interval>] [--priority=<priority>]
+    inquisitor schedule <probe-id> (--http | --https) <host> [--url-suffix=<url-suffix>] [--interval=<interval>] [--priority=<priority>]
     inquisitor (-h | --help)
 
 Options:
     -h --help               Show this screen.
+    --http                  Use HTTP for probe protocol.
+    --https                 Use HTTPS for probe protocol.
     --interval=<interval>   Probe interval in seconds [default: 10].
     --priority=<priority>   Probe priority [default: 0].
 ";
@@ -32,6 +34,9 @@ struct Args {
     arg_host: String,
     flag_interval: Option<i32>,
     flag_priority: Option<i32>,
+    flag_url_suffix: Option<String>,
+    flag_http: bool,
+    flag_https: bool,
 }
 
 fn main() {
@@ -57,7 +62,7 @@ fn main() {
 
         println!("response: {:?}", response);
     } else if args.cmd_schedule {
-        let request = inquest::create_schedule_probe_request(&args.arg_probe_id, &args.arg_host, args.flag_interval, args.flag_priority);
+        let request = inquest::create_schedule_probe_request(&args.arg_probe_id, args.flag_http, args.flag_https, &args.arg_host, args.flag_url_suffix,  args.flag_interval, args.flag_priority);
         let response = client.ScheduleProbe(request);
 
         println!("response: {:?}", response);
