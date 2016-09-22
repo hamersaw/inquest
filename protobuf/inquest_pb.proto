@@ -34,8 +34,8 @@ message ProbeResult {
 
     int64 timestamp_ns = 6;
     int64 application_layer_latency_ns = 7;
-    int32 http_error_code = 8;
-    string http_error_msg = 9;
+    int32 http_status_code = 8;
+    string http_status_msg = 9;
     int32 application_bytes_sent = 10;
     int32 application_bytes_received = 11;
 
