@@ -86,59 +86,6 @@ fn main() {
     }
 }
 
-/*struct ThreadedProberImpl {
-    probe_map: Arc<RwLock<HashMap<String, Sender<()>>>>,
-}
-
-impl ThreadedProberImpl {
-    fn new() -> ThreadedProberImpl {
-        ThreadedProberImpl {
-            probe_map: Arc::new(RwLock::new(HashMap::new())),
-        }
-    }
-
-    fn schedule_probe(&self, probe: &Probe) {
-        let probe = probe.to_owned();
-
-        //create quit channel
-        let (quit_send, quit_receive) = chan::sync(0);
-        
-        //insert quit channel into probe map
-        let mut probe_map = self.probe_map.write().unwrap();
-        probe_map.insert(probe.get_probe_id().to_owned(), quit_send);
-
-        //spawn probing thread
-        std::thread::spawn(move || {
-            let tick = chan::tick_ms(5000);
-            loop {
-                chan_select! {
-                    tick.recv() => {
-                        println!("TODO actively probe: {:?}", probe);
-                    },
-                    quit_receive.recv() => {
-                        return;
-                    }
-                }
-            }
-        });
-    }
-
-    fn cancel_probe(&self, probe_id: &str) {
-        let mut probe_map = self.probe_map.write().unwrap();
-        match probe_map.remove(probe_id) {
-            Some(quit_send) => drop(quit_send),
-            None => {}//TODO return error that the object doesn't exist,
-        }
-    }
-    
-    fn get_probe_ids(&self) -> Vec<String> {
-        let probe_map = self.probe_map.read().unwrap();
-        probe_map.keys().map(|key| key.to_owned()).collect()
-    }
-}*/
-
-
-
 struct ThreadPoolProberImpl {
     probe_jobs: Arc<RwLock<BinaryHeap<ProbeJob>>>,
 }
