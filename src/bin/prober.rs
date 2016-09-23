@@ -10,7 +10,7 @@ use std::fs::File;
 use std::io::Read;
 
 use inquest::inquest_pb_grpc::{ProbeCache, ProbeCacheClient};
-use inquest::prober::ThreadPoolProberImpl;
+use inquest::prober::{Prober, ThreadPoolProberImpl};
 use toml::Parser;
 use toml::Value::Table;
 

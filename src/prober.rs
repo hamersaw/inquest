@@ -10,6 +10,12 @@ use threadpool::ThreadPool;
 use time;
 use time::{Duration, Tm};
 
+pub trait Prober {
+    fn schedule_probe(&self, probe: &Probe) -> Result<(), String>;
+    fn cancel_probe(&self, probe_id: &str) -> Result<(), &str>;
+    fn get_probe_ids(&self) -> Vec<String>;
+}
+
 pub struct ThreadPoolProberImpl {
     probe_jobs: Arc<RwLock<BinaryHeap<ProbeJob>>>,
 }
@@ -63,8 +69,10 @@ impl ThreadPoolProberImpl {
             probe_jobs: probe_jobs,
         }
     }
+}
 
-    pub fn schedule_probe(&self, probe: &Probe) -> Result<(), String> {
+impl Prober for ThreadPoolProberImpl {
+    fn schedule_probe(&self, probe: &Probe) -> Result<(), String> {
         //check if probe_id already exists
         let mut probe_jobs = self.probe_jobs.write().unwrap();
         for probe_job in probe_jobs.iter() {
@@ -78,7 +86,7 @@ impl ThreadPoolProberImpl {
         Ok(())
     }
 
-    pub fn cancel_probe(&self, probe_id: &str) -> Result<(), &str> {
+    fn cancel_probe(&self, probe_id: &str) -> Result<(), &str> {
         //loop through probe jobs removing the probe_id
         let mut probe_jobs = self.probe_jobs.write().unwrap();
         let mut _probe_jobs = BinaryHeap::new();
@@ -93,7 +101,7 @@ impl ThreadPoolProberImpl {
         Ok(())
     }
 
-    pub fn get_probe_ids(&self) -> Vec<String> {
+    fn get_probe_ids(&self) -> Vec<String> {
         let probe_jobs = self.probe_jobs.read().unwrap();
 
         probe_jobs.iter()
