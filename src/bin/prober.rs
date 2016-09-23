@@ -55,18 +55,24 @@ fn main() {
     let port = toml_table.lookup("server.port")
                         .expect("unable to find field 'server.port'")
                         .as_integer().expect("unable to parse configuration_server.port into integer") as u16;
-    let probe_priority = toml_table.lookup("probe.probe_priority")
-                        .expect("unable to find field 'probe.probe_priority'")
-                        .as_integer().expect("unable to parse probe.probe_priority into integer") as i32;
+    let probe_poll_seconds = toml_table.lookup("server.probe_poll_seconds")
+                        .expect("unable to find field 'server.probe_poll_seconds'")
+                        .as_integer().expect("unable to parse server.probe_poll_seconds into integer") as u32;
+    let probe_threads = toml_table.lookup("prober.probe_threads")
+                        .expect("unable to find field 'prober.probe_threads'")
+                        .as_integer().expect("unable to parse prober.probe_threads into integer") as usize;
+    let probe_priority = toml_table.lookup("prober.probe_priority")
+                        .expect("unable to find field 'prober.probe_priority'")
+                        .as_integer().expect("unable to parse prober.probe_priority into integer") as i32;
 
     //create prober
     //let prober = ThreadedProberImpl::new();
-    let prober = ThreadPoolProberImpl::new();
+    let prober = ThreadPoolProberImpl::new(probe_threads);
 
     //open client and start scheduling probes
     let client = ProbeCacheClient::new(host, port).unwrap();
 
-    let tick = chan::tick_ms(5000);
+    let tick = chan::tick_ms(probe_poll_seconds * 1000);
     loop {
         chan_select! {
             tick.recv() => {
@@ -92,13 +98,13 @@ struct ThreadPoolProberImpl {
 }
 
 impl ThreadPoolProberImpl {
-    fn new() -> ThreadPoolProberImpl {
+    fn new(probe_threads: usize) -> ThreadPoolProberImpl {
         let probe_jobs = Arc::new(RwLock::new(BinaryHeap::new()));
 
         //start thread to periodically check probe jobs to execute
         let thread_probe_jobs = probe_jobs.clone();
         std::thread::spawn(move || {
-            let pool = ThreadPool::new(4);
+            let pool = ThreadPool::new(probe_threads);
             let tick = chan::tick_ms(250);
 
             loop {

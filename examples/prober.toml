@@ -1,6 +1,8 @@
 [server]
 host = "localhost"
 port = 52890
+probe_poll_seconds = 30
 
-[probe]
-probe_priority = 4
+[prober]
+probe_threads = 4
+probe_priority = 0
