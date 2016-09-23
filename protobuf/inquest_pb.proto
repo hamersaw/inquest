@@ -32,15 +32,18 @@ message ProbeResult {
     string prober_ip_string = 4;
     string prober_hostname = 5;
 
-    int64 timestamp_ns = 6;
-    int64 application_layer_latency_ns = 7;
-    int32 http_status_code = 8;
-    string http_status_msg = 9;
-    int32 application_bytes_sent = 10;
-    int32 application_bytes_received = 11;
+    int64 timestamp_sec = 6;
+    int64 application_layer_latency_nanosec = 7;
+    bool success = 8;
+    string error_msg = 9;
+
+    int32 http_status_code = 10;
+    string http_status_msg = 11;
+    int32 application_bytes_received = 12;
 
     /*
     int64 probe attempt number
+    int32 application_bytes_sent
     string request/reply content
     string dns_actual
     repeated ip_address

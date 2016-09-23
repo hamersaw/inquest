@@ -195,6 +195,8 @@ impl ProbeJob {
     fn execute(&self) -> Result<(), &str> {
         let mut probe_result = ProbeResult::new();
         probe_result.set_probe_id(self.probe.get_probe_id().to_owned());
+        probe_result.set_timestamp_sec(time::get_time().sec);
+        //TODO populate prober_hostname or prober_ip_bytes or prober_ip_string
 
         //format the url
         let url = format!("{}://{}/{}",
@@ -213,16 +215,18 @@ impl ProbeJob {
 
         //calculate execution time
         let execution_time = time::now_utc().sub(start_time);
-        probe_result.set_application_layer_latency_ns(execution_time.num_nanoseconds().unwrap());
+        probe_result.set_application_layer_latency_nanosec(execution_time.num_nanoseconds().unwrap());
 
         //parse response
         match response {
             Ok(response) => {
+                probe_result.set_success(true);
+
                 {
                     //populate http status codes and message
                     let status_raw = response.status_raw();
+                    probe_result.set_http_status_msg(format!("{}", status_raw.1)); //TODO - fix this
                     probe_result.set_http_status_code(status_raw.0 as i32);
-                    //probe_result.set_http_status_msg(status_raw.1.into_owned());
                 }
 
                 {
@@ -232,7 +236,8 @@ impl ProbeJob {
                 }
             },
             Err(e) => {
-                println!("failed request");
+                probe_result.set_success(false);
+                probe_result.set_error_msg(format!("{}", e));
             },
         }
 
