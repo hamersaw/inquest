@@ -1,16 +1,28 @@
-extern crate protobuf;
+#[macro_use]
+extern crate chan;
 extern crate grpc;
 extern crate futures;
 extern crate futures_cpupool;
+extern crate hyper;
+extern crate protobuf;
+extern crate time;
+extern crate threadpool;
+extern crate toml;
 
 pub mod inquest_pb;
 pub mod inquest_pb_grpc;
+pub mod prober;
+pub mod writer;
+
+use std::io::Read;
+use std::ops::Sub;
 
 use protobuf::RepeatedField;
 
 use inquest_pb::{CancelProbeRequest, DescribeProbeRequest, GatherProbesRequest, ListProbeIdsRequest, ScheduleProbeRequest};
 use inquest_pb::{CancelProbeReply, DescribeProbeReply, GatherProbesReply, ListProbeIdsReply, ScheduleProbeReply};
-use inquest_pb::{Probe, Probe_Protocol};
+use inquest_pb::{Probe, Probe_Protocol, ProbeResult};
+use hyper::Client;
 
 pub fn create_cancel_probe_request(probe_id: &str) -> CancelProbeRequest {
     let mut request = CancelProbeRequest::new();
@@ -123,4 +135,56 @@ pub fn create_schedule_probe_request(probe_id: &str, http: bool, https: bool, ho
 
 pub fn create_schedule_probe_reply() -> ScheduleProbeReply {
     ScheduleProbeReply::new()
+}
+
+pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
+    let mut probe_result = ProbeResult::new();
+    probe_result.set_probe_id(probe.get_probe_id().to_owned());
+    probe_result.set_timestamp_sec(time::get_time().sec);
+    //TODO populate prober_hostname or prober_ip_bytes or prober_ip_string
+
+    //format the url
+    let url = format!("{}://{}/{}",
+            match probe.get_protocol() {
+                Probe_Protocol::HTTP => "http",
+                Probe_Protocol::HTTPS => "https",
+            },
+            probe.get_host(),
+            probe.get_url_suffix()
+        );
+
+    //submit request
+    let client = Client::new();
+    let start_time = time::now_utc();
+    let response = client.get(&url).send();
+
+    //calculate execution time
+    let execution_time = time::now_utc().sub(start_time);
+    probe_result.set_application_layer_latency_nanosec(execution_time.num_nanoseconds().unwrap());
+
+    //parse response
+    match response {
+        Ok(response) => {
+            probe_result.set_success(true);
+
+            {
+                //populate http status codes and message
+                let status_raw = response.status_raw();
+                probe_result.set_http_status_msg(format!("{}", status_raw.1)); //TODO - fix this
+                probe_result.set_http_status_code(status_raw.0 as i32);
+            }
+
+            {
+                //populate application byte counts
+                let byte_count = response.bytes().count();
+                probe_result.set_application_bytes_received(byte_count as i32);
+            }
+        },
+        Err(e) => {
+            probe_result.set_success(false);
+            probe_result.set_error_msg(format!("{}", e));
+        },
+    }
+
+    Ok(probe_result)
 }

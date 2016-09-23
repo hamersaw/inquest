@@ -6,18 +6,11 @@ extern crate threadpool;
 extern crate time;
 extern crate toml;
 
-use std::cmp::{Ordering, PartialOrd};
-use std::collections::BinaryHeap;
 use std::fs::File;
 use std::io::Read;
-use std::ops::{Add, Sub};
-use std::sync::{Arc, RwLock};
 
-use hyper::Client;
-use inquest::inquest_pb::{Probe, Probe_Protocol, ProbeResult};
 use inquest::inquest_pb_grpc::{ProbeCache, ProbeCacheClient};
-use threadpool::ThreadPool;
-use time::{Duration, Tm};
+use inquest::prober::ThreadPoolProberImpl;
 use toml::Parser;
 use toml::Value::Table;
 
@@ -66,7 +59,6 @@ fn main() {
                         .as_integer().expect("unable to parse prober.probe_priority into integer") as i32;
 
     //create prober
-    //let prober = ThreadedProberImpl::new();
     let prober = ThreadPoolProberImpl::new(probe_threads);
 
     //open client and start scheduling probes
@@ -90,194 +82,5 @@ fn main() {
                 }
             }
         }
-    }
-}
-
-struct ThreadPoolProberImpl {
-    probe_jobs: Arc<RwLock<BinaryHeap<ProbeJob>>>,
-}
-
-impl ThreadPoolProberImpl {
-    fn new(probe_threads: usize) -> ThreadPoolProberImpl {
-        let probe_jobs = Arc::new(RwLock::new(BinaryHeap::new()));
-
-        //start thread to periodically check probe jobs to execute
-        let thread_probe_jobs = probe_jobs.clone();
-        std::thread::spawn(move || {
-            let pool = ThreadPool::new(probe_threads);
-            let tick = chan::tick_ms(250);
-
-            loop {
-                chan_select! {
-                    tick.recv() => {
-                        let now = time::now_utc();
-
-                        //loop through probes while they should be executed
-                        let mut probe_jobs: std::sync::RwLockWriteGuard<BinaryHeap<ProbeJob>> = thread_probe_jobs.write().unwrap();
-                        loop {
-                            let next_execution_time = match probe_jobs.peek() {
-                                Some(probe_job) => probe_job.get_next_execution_time().to_owned(),
-                                None => break,
-                            };
-
-                            if next_execution_time.le(&now) {
-                                let mut probe_job = probe_jobs.pop().unwrap();
-
-                                //submit probe execution to thread pool
-                                let pool_probe_job = probe_job.clone();
-                                pool.execute(move || {
-                                    let _ = pool_probe_job.execute();
-                                });
-
-                                //add probe job back to binary heap with increased execution time
-                                let _ = probe_job.inc_execution_time();
-                                probe_jobs.push(probe_job);
-                            } else {
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        ThreadPoolProberImpl {
-            probe_jobs: probe_jobs,
-        }
-    }
-
-    fn schedule_probe(&self, probe: &Probe) -> Result<(), String> {
-        //check if probe_id already exists
-        let mut probe_jobs = self.probe_jobs.write().unwrap();
-        for probe_job in probe_jobs.iter() {
-            if probe_job.probe.get_probe_id() == probe.get_probe_id() {
-                return Err(format!("probe_id '{}' already exists", probe.get_probe_id()));
-            }
-        }
-
-        //add probe to probe jobs
-        probe_jobs.push(ProbeJob::new(probe.to_owned()));
-        Ok(())
-    }
-
-    fn cancel_probe(&self, probe_id: &str) -> Result<(), &str> {
-        //loop through probe jobs removing the probe_id
-        let mut probe_jobs = self.probe_jobs.write().unwrap();
-        let mut _probe_jobs = BinaryHeap::new();
-        for probe_job in probe_jobs.drain() {
-            if probe_job.probe.get_probe_id() != probe_id {
-                _probe_jobs.push(probe_job);
-            }
-        }
-
-        //retain correct probe jobs
-        probe_jobs.append(&mut _probe_jobs);
-        Ok(())
-    }
-
-    fn get_probe_ids(&self) -> Vec<String> {
-        let probe_jobs = self.probe_jobs.read().unwrap();
-
-        probe_jobs.iter()
-                .map(|probe_job| probe_job.probe.get_probe_id().to_owned())
-                .collect()
-    }
-}
-
-#[derive(Clone)]
-struct ProbeJob {
-    next_execution_time: Tm,
-    probe: Probe,
-}
-
-impl ProbeJob {
-    fn new(probe: Probe) -> ProbeJob {
-        ProbeJob {
-            next_execution_time: time::now_utc(),
-            probe: probe,
-        }
-    }
-
-    fn execute(&self) -> Result<(), &str> {
-        let mut probe_result = ProbeResult::new();
-        probe_result.set_probe_id(self.probe.get_probe_id().to_owned());
-        probe_result.set_timestamp_sec(time::get_time().sec);
-        //TODO populate prober_hostname or prober_ip_bytes or prober_ip_string
-
-        //format the url
-        let url = format!("{}://{}/{}",
-                match self.probe.get_protocol() {
-                    Probe_Protocol::HTTP => "http",
-                    Probe_Protocol::HTTPS => "https",
-                },
-                self.probe.get_host(),
-                self.probe.get_url_suffix()
-            );
-
-        //submit request
-        let client = Client::new();
-        let start_time = time::now_utc();
-        let response = client.get(&url).send();
-
-        //calculate execution time
-        let execution_time = time::now_utc().sub(start_time);
-        probe_result.set_application_layer_latency_nanosec(execution_time.num_nanoseconds().unwrap());
-
-        //parse response
-        match response {
-            Ok(response) => {
-                probe_result.set_success(true);
-
-                {
-                    //populate http status codes and message
-                    let status_raw = response.status_raw();
-                    probe_result.set_http_status_msg(format!("{}", status_raw.1)); //TODO - fix this
-                    probe_result.set_http_status_code(status_raw.0 as i32);
-                }
-
-                {
-                    //populate application byte counts
-                    let byte_count = response.bytes().count();
-                    probe_result.set_application_bytes_received(byte_count as i32);
-                }
-            },
-            Err(e) => {
-                probe_result.set_success(false);
-                probe_result.set_error_msg(format!("{}", e));
-            },
-        }
-
-        println!("probe_result: {:?}", probe_result);
-        Ok(())
-    }
-
-    fn inc_execution_time(&mut self) -> Result<(), &str> {
-        let duration = Duration::seconds(self.probe.get_probe_interval_seconds() as i64);
-        self.next_execution_time = self.next_execution_time.add(duration);
-        Ok(())
-    }
-
-    fn get_next_execution_time(&self) -> &Tm {
-        &self.next_execution_time
-    }
-}
-
-impl PartialEq for ProbeJob {
-    fn eq(&self, other: &ProbeJob) -> bool {
-        self.next_execution_time == other.next_execution_time
-    }
-}
-
-impl Eq for ProbeJob {}
-
-impl Ord for ProbeJob {
-    fn cmp(&self, other: &ProbeJob) -> Ordering {
-        other.next_execution_time.cmp(&self.next_execution_time)
-    }
-}
-
-impl PartialOrd for ProbeJob {
-    fn partial_cmp(&self, other: &ProbeJob) -> Option<Ordering> {
-        Some(self.cmp(other))
     }
 }
