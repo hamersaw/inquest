@@ -2,10 +2,12 @@ use std;
 use std::cmp::{Ordering, PartialOrd};
 use std::collections::BinaryHeap;
 use std::ops::Add;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
+
+use inquest_pb::Probe;
+use writer::Writer;
 
 use chan;
-use inquest_pb::Probe;
 use threadpool::ThreadPool;
 use time;
 use time::{Duration, Tm};
@@ -21,11 +23,12 @@ pub struct ThreadPoolProberImpl {
 }
 
 impl ThreadPoolProberImpl {
-    pub fn new(probe_threads: usize) -> ThreadPoolProberImpl {
+    pub fn new(writer: Box<Writer + Send>, probe_threads: usize) -> ThreadPoolProberImpl {
         let probe_jobs = Arc::new(RwLock::new(BinaryHeap::new()));
 
         //start thread to periodically check probe jobs to execute
         let thread_probe_jobs = probe_jobs.clone();
+        let thread_writer = Arc::new(Mutex::new(writer));
         std::thread::spawn(move || {
             let pool = ThreadPool::new(probe_threads);
             let tick = chan::tick_ms(250);
@@ -48,9 +51,15 @@ impl ThreadPoolProberImpl {
 
                                 //submit probe execution to thread pool
                                 let pool_probe_job = probe_job.clone();
+                                let pool_writer = thread_writer.clone();
                                 pool.execute(move || {
-                                    let probe_result = super::execute_probe(&pool_probe_job.probe);
-                                    println!("probe_result: {:?}", probe_result);
+                                    match super::execute_probe(&pool_probe_job.probe) {
+                                        Ok(probe_result) => {
+                                            let mut writer = pool_writer.lock().unwrap();
+                                            let _ = writer.write_probe_result(&probe_result);
+                                        },
+                                        Err(e) => println!("ERROR: {}", e),
+                                    }
                                 });
 
                                 //add probe job back to binary heap with increased execution time

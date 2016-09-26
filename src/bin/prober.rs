@@ -11,6 +11,7 @@ use std::io::Read;
 
 use inquest::inquest_pb_grpc::{ProbeCache, ProbeCacheClient};
 use inquest::prober::{Prober, ThreadPoolProberImpl};
+use inquest::writer::{PrintWriter, StreamWriter};
 use toml::Parser;
 use toml::Value::Table;
 
@@ -57,9 +58,21 @@ fn main() {
     let probe_priority = toml_table.lookup("prober.probe_priority")
                         .expect("unable to find field 'prober.probe_priority'")
                         .as_integer().expect("unable to parse prober.probe_priority into integer") as i32;
+    let writer_str = toml_table.lookup("prober.writer")
+                        .expect("unable to find field 'prober.writer'")
+                        .as_str().expect("unable to parse prober.writer int &str");
 
     //create prober
-    let prober = ThreadPoolProberImpl::new(probe_threads);
+    /*let writer: Writer + Send = match writer_str {
+        "PrintWriter" => PrintWriter::new(),
+        "StreamWriter" => {
+            let file = File::open("/tmp/inquest.log").unwrap();
+            StreamWriter::new(Box::new(file))
+        }
+        _ => panic!("unknown writer type"),
+    };*/
+    
+    let prober = ThreadPoolProberImpl::new(Box::new(PrintWriter::new()), probe_threads);
 
     //open client and start scheduling probes
     let client = ProbeCacheClient::new(host, port).unwrap();
