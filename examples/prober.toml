@@ -6,4 +6,4 @@ probe_poll_seconds = 30
 [prober]
 probe_threads = 4
 probe_priority = 0
-writer = "PrintWriter"
+writer = "FileWriter"

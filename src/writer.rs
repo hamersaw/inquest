@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::fs::File;
 
 use inquest_pb::ProbeResult;
 use protobuf::{CodedOutputStream, Message, ProtobufError};
@@ -7,31 +7,33 @@ pub trait Writer {
     fn write_probe_result(&mut self, probe_result: &ProbeResult) -> Result<(), ProtobufError>;
 }
 
-pub struct StreamWriter {
-    write: Box<Write>,
+pub struct FileWriter {
+    file: File,
 }
 
-impl StreamWriter {
-    pub fn new(write: Box<Write>) -> StreamWriter {
-        StreamWriter {
-            write: write,
+impl FileWriter {
+    pub fn new(directory: &str) -> FileWriter {
+        let file = File::create(format!("{}/inquest.log", directory)).unwrap();
+
+        FileWriter {
+            file: file,
         }
     }
 }
 
-impl Writer for StreamWriter {
+impl Writer for FileWriter {
     fn write_probe_result(&mut self, probe_result: &ProbeResult) -> Result<(), ProtobufError> {
-        //try!(self.output_stream.write_message_no_tag(probe_result));
-        let mut output_stream = CodedOutputStream::new(&mut self.write);
+        let mut output_stream = CodedOutputStream::new(&mut self.file);
         try!(output_stream.write_uint32_no_tag(probe_result.compute_size()));
         try!(probe_result.write_to_with_cached_sizes(&mut output_stream));
         try!(output_stream.flush());
         
         Ok(())
+
     }
 }
 
-unsafe impl Send for StreamWriter {}
+unsafe impl Send for FileWriter {}
 
 pub struct PrintWriter {
 }
