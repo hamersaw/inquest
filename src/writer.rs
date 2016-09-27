@@ -31,7 +31,6 @@ impl Writer for FileWriter {
         try!(output_stream.flush());
         
         Ok(())
-
     }
 }
 

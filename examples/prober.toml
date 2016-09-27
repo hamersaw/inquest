@@ -1,9 +1,21 @@
+# Information for Alpha Configuration Server
 [server]
-host = "localhost"
-port = 52890
-probe_poll_seconds = 30
+    # Server hostname
+    host = "localhost"
 
+    # Server port
+    port = 52890
+
+    # Number of seconds between polling for scheduled/canceled probes
+    probe_poll_seconds = 30
+
+# Configuration for this prober
 [prober]
-probe_threads = 4
-probe_priority = 0
-writer = "FileWriter"
+    # Number of threads in the probing threadpool
+    probe_threads = 4
+
+    # Minimum priority of probes this prober will execute
+    probe_priority = 0
+
+    # Writer configuration for probe results
+    writer = "FileWriter"
