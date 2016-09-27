@@ -1,4 +1,25 @@
-# Information for Alpha Configuration Server
+# Number of threads in the probing threadpool
+probe_threads = 4
+
+# Minimum priority of probes this prober will execute
+probe_priority = 0
+
+# Writer configuration for probe results
+[writer]
+    # Writer type
+    # FileWriter: Writes protobuf to file
+    #   directory: Directory to write protobuf files
+    #   max_filesize: Maximum filesize of protobuf files
+    # PrintWriter: Prints protobuf to stdout
+    type = "FileWriter"
+
+    # Directory to write probe result protobuf files to
+    directory = "/tmp"
+
+    # Maximum filesize of probe result files (default: 10MB)
+    max_filesize = 10485760
+
+# Information for Configuration Server
 [server]
     # Server hostname
     host = "localhost"
@@ -8,14 +29,3 @@
 
     # Number of seconds between polling for scheduled/canceled probes
     probe_poll_seconds = 30
-
-# Configuration for this prober
-[prober]
-    # Number of threads in the probing threadpool
-    probe_threads = 4
-
-    # Minimum priority of probes this prober will execute
-    probe_priority = 0
-
-    # Writer configuration for probe results
-    writer = "FileWriter"

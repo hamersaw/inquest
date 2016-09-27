@@ -43,6 +43,15 @@ fn main() {
 
     //parse toml values
     let toml_table = Table(toml);
+    let probe_threads = toml_table.lookup("probe_threads")
+                        .expect("unable to find field 'probe_threads'")
+                        .as_integer().expect("unable to parse probe_threads into integer") as usize;
+    let probe_priority = toml_table.lookup("probe_priority")
+                        .expect("unable to find field 'probe_priority'")
+                        .as_integer().expect("unable to parse probe_priority into integer") as i32;
+    let writer_str = toml_table.lookup("writer.type")
+                        .expect("unable to find field 'writer.type'")
+                        .as_str().expect("unable to parse writer.type into &str");
     let host = toml_table.lookup("server.host")
                         .expect("unable to find field 'server.host'")
                         .as_str().expect("unable to parse configuration_server.host into &str");
@@ -52,20 +61,21 @@ fn main() {
     let probe_poll_seconds = toml_table.lookup("server.probe_poll_seconds")
                         .expect("unable to find field 'server.probe_poll_seconds'")
                         .as_integer().expect("unable to parse server.probe_poll_seconds into integer") as u32;
-    let probe_threads = toml_table.lookup("prober.probe_threads")
-                        .expect("unable to find field 'prober.probe_threads'")
-                        .as_integer().expect("unable to parse prober.probe_threads into integer") as usize;
-    let probe_priority = toml_table.lookup("prober.probe_priority")
-                        .expect("unable to find field 'prober.probe_priority'")
-                        .as_integer().expect("unable to parse prober.probe_priority into integer") as i32;
-    let writer_str = toml_table.lookup("prober.writer")
-                        .expect("unable to find field 'prober.writer'")
-                        .as_str().expect("unable to parse prober.writer int &str");
 
     //create prober
     let writer = match writer_str {
         "PrintWriter" => Box::new(PrintWriter::new()) as Box<Writer + Send>,
-        "FileWriter" => Box::new(FileWriter::new("/tmp")) as Box<Writer + Send>,
+        "FileWriter" => {
+            let directory = toml_table.lookup("writer.directory")
+                                .expect("unable to find field 'writer.directory'")
+                                .as_str().expect("unable to parse writer.directory into &str");
+
+            let max_filesize = toml_table.lookup("writer.max_filesize")
+                                .expect("unable to find field 'writer.max_filesize'")
+                                .as_integer().expect("unable to parse writer.max_filesize into integer") as u32;
+
+            Box::new(FileWriter::new(directory, max_filesize)) as Box<Writer + Send>
+        }
         _ => panic!("unknown writer type '{}'", writer_str),
     };
     
