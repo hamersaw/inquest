@@ -34,16 +34,18 @@ fn create_file(directory: &str) -> File {
 impl Writer for FileWriter {
     fn write_probe_result(&mut self, probe_result: &ProbeResult) -> Result<(), ProtobufError> {
         //write probe result to file
-        let mut output_stream = CodedOutputStream::new(&mut self.file);
-        try!(output_stream.write_uint32_no_tag(probe_result.compute_size()));
-        try!(probe_result.write_to_with_cached_sizes(&mut output_stream));
-        try!(output_stream.flush());
+        {
+            let mut output_stream = CodedOutputStream::new(&mut self.file);
+            try!(output_stream.write_uint32_no_tag(probe_result.compute_size()));
+            try!(probe_result.write_to_with_cached_sizes(&mut output_stream));
+            try!(output_stream.flush());
+        }
 
         //add filesize
         self.filesize += 4 + probe_result.get_cached_size();
-        if self.max_filesize >= self.filesize {
-            //TODO open new file
-            //self.file = create_file(&self.directory);
+        if self.filesize >= self.max_filesize {
+            self.file = create_file(&self.directory);
+            self.filesize = 0;
         }
         
         Ok(())
