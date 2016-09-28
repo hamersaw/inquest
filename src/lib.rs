@@ -21,7 +21,7 @@ use protobuf::RepeatedField;
 
 use inquest_pb::{CancelProbeRequest, DescribeProbeRequest, GatherProbesRequest, ListProbeIdsRequest, ScheduleProbeRequest};
 use inquest_pb::{CancelProbeReply, DescribeProbeReply, GatherProbesReply, ListProbeIdsReply, ScheduleProbeReply};
-use inquest_pb::{Probe, Probe_Protocol, ProbeResult};
+use inquest_pb::{HostProbeResult, Probe, Probe_Protocol, ProbeResult};
 use hyper::Client;
 
 pub fn create_cancel_probe_request(probe_id: &str) -> CancelProbeRequest {
@@ -140,51 +140,67 @@ pub fn create_schedule_probe_reply() -> ScheduleProbeReply {
 pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
     let mut probe_result = ProbeResult::new();
     probe_result.set_probe_id(probe.get_probe_id().to_owned());
-    probe_result.set_timestamp_sec(time::get_time().sec);
-    //TODO populate prober_hostname or prober_ip_bytes or prober_ip_string
+    //TODO populate prober_hostname
+    probe_result.set_success(true);
 
-    //format the url
-    let url = format!("{}://{}/{}",
-            match probe.get_protocol() {
-                Probe_Protocol::HTTP => "http",
-                Probe_Protocol::HTTPS => "https",
-            },
-            probe.get_host(),
-            probe.get_url_suffix()
-        );
+    //TODO DNS resolution lookup
+ 
+    let mut repeated_host_probe_result: RepeatedField<HostProbeResult> = RepeatedField::new();
+    {
+        let mut host_probe_result = HostProbeResult::new();
+        host_probe_result.set_timestamp_sec(time::get_time().sec);
 
-    //submit request
-    let client = Client::new();
-    let start_time = time::now_utc();
-    let response = client.get(&url).send();
+        if probe.get_protocol() == Probe_Protocol::HTTP || probe.get_protocol() == Probe_Protocol::HTTPS {
+            //format the url
+            let url = format!("{}://{}/{}",
+                    match probe.get_protocol() {
+                        Probe_Protocol::HTTP => "http",
+                        Probe_Protocol::HTTPS => "https",
+                        _ => "", //unreachable
+                    },
+                    probe.get_host(),
+                    probe.get_url_suffix()
+                );
 
-    //calculate execution time
-    let execution_time = time::now_utc().sub(start_time);
-    probe_result.set_application_layer_latency_nanosec(execution_time.num_nanoseconds().unwrap());
+            //submit request
+            let client = Client::new();
+            let start_time = time::now_utc();
+            let response = client.get(&url).send();
 
-    //parse response
-    match response {
-        Ok(response) => {
-            probe_result.set_success(true);
+            //calculate execution time
+            let execution_time = time::now_utc().sub(start_time);
+            host_probe_result.set_application_layer_latency_nanosec(execution_time.num_nanoseconds().unwrap());
 
-            {
-                //populate http status codes and message
-                let status_raw = response.status_raw();
-                probe_result.set_http_status_msg(format!("{}", status_raw.1)); //TODO - fix this
-                probe_result.set_http_status_code(status_raw.0 as i32);
+            //parse response
+            match response {
+                Ok(response) => {
+                    host_probe_result.set_success(true);
+
+                    {
+                        //populate http status codes and message
+                        let status_raw = response.status_raw();
+                        host_probe_result.set_http_status_message(format!("{}", status_raw.1)); //TODO fix this
+                        host_probe_result.set_http_status_code(status_raw.0 as i32);
+                    }
+
+                    {
+                        //populate application byte counts
+                        let byte_count = response.bytes().count();
+                        host_probe_result.set_application_bytes_received(byte_count as i32);
+                    }
+                },
+                Err(e) => {
+                    host_probe_result.set_success(false);
+                    host_probe_result.set_error_message(format!("{}", e));
+                },
             }
+        } else if probe.get_protocol() == Probe_Protocol::PING {
+            //TODO execute ping
+        }
 
-            {
-                //populate application byte counts
-                let byte_count = response.bytes().count();
-                probe_result.set_application_bytes_received(byte_count as i32);
-            }
-        },
-        Err(e) => {
-            probe_result.set_success(false);
-            probe_result.set_error_msg(format!("{}", e));
-        },
+        repeated_host_probe_result.push(host_probe_result);
     }
 
+    probe_result.set_host_probe_result(repeated_host_probe_result);
     Ok(probe_result)
 }

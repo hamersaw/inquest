@@ -25,6 +25,8 @@ ability to scheudle/cancel probes, list probe ids, and describe probes.
 Simple utility tool to parse probe result protobuf files.
 
 ##TODO
+- DNS resolution (https://github.com/mikedilger/resolv-rs)
+- add prober hostname/ip_address to probe_results
 - stop prober when it can't connect to configuration server for awhile
 - make configuration server a distributed application that's fully redundant
 - some security for users adding probes etc.

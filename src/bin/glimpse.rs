@@ -7,7 +7,7 @@ use std::fs::File;
 
 use docopt::Docopt;
 use inquest::inquest_pb::ProbeResult;
-use protobuf::{CodedInputStream, Message, ProtobufError};
+use protobuf::{CodedInputStream, Message};
 
 const USAGE: &'static str = "
 Application to parse probe result protobuf files
@@ -49,7 +49,7 @@ fn main() {
         //parse message
         let mut message_input_stream = CodedInputStream::from_bytes(&bytes);
         let mut probe_result = ProbeResult::new();
-        probe_result.merge_from(&mut message_input_stream);
+        let _ = probe_result.merge_from(&mut message_input_stream);
         println!("probe_result: {:?}", probe_result);
 
         //checck if end of file
