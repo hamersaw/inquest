@@ -25,16 +25,6 @@ message Probe {
     int32 attempts_to_declare_failure = 11;
 }
 
-/*
-int64 probe attempt number
-int32 application_bytes_sent
-string request/reply content
-string dns_actual
-repeated ip_address
-repeated_ip_address_bytes
-int32 last_ip_address_attempted
-*/
-
 message ProbeResult {
     string probe_id = 1;
     int64 version_number = 2;
@@ -51,10 +41,11 @@ message HostProbeResult {
     bool success = 3;
     string error_message = 4;
 
-    //TODO add ip address probed
-    int32 http_status_code = 5;
-    string http_status_message = 6;
-    int32 application_bytes_received = 7;
+    bytes ip_address = 5;
+
+    int32 http_status_code = 6;
+    string http_status_message = 7;
+    int32 application_bytes_received = 8;
 }
 
 /**

@@ -153,7 +153,7 @@ pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
     for answer in response.answers::<A>() {
         let mut host_probe_result = HostProbeResult::new();
         host_probe_result.set_timestamp_sec(time::get_time().sec);
-        //TODO set ip_address
+        host_probe_result.set_ip_address(answer.data.address.octets().to_vec());
         host_probe_result.set_success(true);
 
         let _ = match probe.get_protocol() {
