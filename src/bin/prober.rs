@@ -43,6 +43,9 @@ fn main() {
 
     //parse toml values
     let toml_table = Table(toml);
+    let prober_hostname = toml_table.lookup("prober_hostname")
+                        .expect("unable to find field 'prober_hostname'")
+                        .as_str().expect("unable to parse prober_hostname into &str");
     let probe_threads = toml_table.lookup("probe_threads")
                         .expect("unable to find field 'probe_threads'")
                         .as_integer().expect("unable to parse probe_threads into integer") as usize;
@@ -79,7 +82,7 @@ fn main() {
         _ => panic!("unknown writer type '{}'", writer_str),
     };
     
-    let prober = ThreadPoolProberImpl::new(writer, probe_threads);
+    let prober = ThreadPoolProberImpl::new(writer, prober_hostname, probe_threads);
 
     //open client and start scheduling probes
     let client = ProbeCacheClient::new(host, port).unwrap();

@@ -1,3 +1,6 @@
+# Hostname of machine this is running on
+prober_hostname = "test.netsec.colostate.edu"
+
 # Number of threads in the probing threadpool
 probe_threads = 4
 

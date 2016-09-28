@@ -25,7 +25,9 @@ ability to scheudle/cancel probes, list probe ids, and describe probes.
 Simple utility tool to parse probe result protobuf files.
 
 ##TODO
-- add prober hostname to probe_results
+- resolve IPv6 as well
+- implement ping
+- figure out issues with http requests on ip addresses
 - stop prober when it can't connect to configuration server for awhile
 - make configuration server a distributed application that's fully redundant
 - some security for users adding probes etc.

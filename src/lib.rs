@@ -142,7 +142,6 @@ pub fn create_schedule_probe_reply() -> ScheduleProbeReply {
 pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
     let mut probe_result = ProbeResult::new();
     probe_result.set_probe_id(probe.get_probe_id().to_owned());
-    //TODO populate prober_hostname
     probe_result.set_success(true);
 
     //DNS resolution

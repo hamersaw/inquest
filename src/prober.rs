@@ -23,12 +23,13 @@ pub struct ThreadPoolProberImpl {
 }
 
 impl ThreadPoolProberImpl {
-    pub fn new(writer: Box<Writer + Send>, probe_threads: usize) -> ThreadPoolProberImpl {
+    pub fn new(writer: Box<Writer + Send>, prober_hostname: &str, probe_threads: usize) -> ThreadPoolProberImpl {
         let probe_jobs = Arc::new(RwLock::new(BinaryHeap::new()));
 
         //start thread to periodically check probe jobs to execute
         let thread_probe_jobs = probe_jobs.clone();
         let thread_writer = Arc::new(Mutex::new(writer));
+        let thread_prober_hostname = prober_hostname.to_owned();
         std::thread::spawn(move || {
             let pool = ThreadPool::new(probe_threads);
             let tick = chan::tick_ms(250);
@@ -52,9 +53,11 @@ impl ThreadPoolProberImpl {
                                 //submit probe execution to thread pool
                                 let pool_probe_job = probe_job.clone();
                                 let pool_writer = thread_writer.clone();
+                                let prober_hostname = thread_prober_hostname.clone();
                                 pool.execute(move || {
                                     match super::execute_probe(&pool_probe_job.probe) {
-                                        Ok(probe_result) => {
+                                        Ok(mut probe_result) => {
+                                            probe_result.set_prober_hostname(prober_hostname);
                                             let mut writer = pool_writer.lock().unwrap();
                                             let _ = writer.write_probe_result(&probe_result);
                                         },
