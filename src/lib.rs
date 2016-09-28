@@ -5,6 +5,7 @@ extern crate futures;
 extern crate futures_cpupool;
 extern crate hyper;
 extern crate protobuf;
+extern crate resolv;
 extern crate time;
 extern crate threadpool;
 extern crate toml;
@@ -17,12 +18,13 @@ pub mod writer;
 use std::io::Read;
 use std::ops::Sub;
 
-use protobuf::RepeatedField;
-
 use inquest_pb::{CancelProbeRequest, DescribeProbeRequest, GatherProbesRequest, ListProbeIdsRequest, ScheduleProbeRequest};
 use inquest_pb::{CancelProbeReply, DescribeProbeReply, GatherProbesReply, ListProbeIdsReply, ScheduleProbeReply};
 use inquest_pb::{HostProbeResult, Probe, Probe_Protocol, ProbeResult};
 use hyper::Client;
+use protobuf::RepeatedField;
+use resolv::{Resolver, Class, RecordType};
+use resolv::record::A;
 
 pub fn create_cancel_probe_request(probe_id: &str) -> CancelProbeRequest {
     let mut request = CancelProbeRequest::new();
@@ -143,17 +145,21 @@ pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
     //TODO populate prober_hostname
     probe_result.set_success(true);
 
-    //TODO DNS resolution lookup
- 
+    //DNS resolution
+    let mut resolver = Resolver::new().unwrap();
+    let mut response = resolver.query(&probe.get_host().to_owned().into_bytes(), Class::IN, RecordType::A).unwrap(); //TODO fix &str -> String -> &[u8]
+
     let mut repeated_host_probe_result: RepeatedField<HostProbeResult> = RepeatedField::new();
-    {
+    for answer in response.answers::<A>() {
         let mut host_probe_result = HostProbeResult::new();
         host_probe_result.set_timestamp_sec(time::get_time().sec);
+        //TODO set ip_address
         host_probe_result.set_success(true);
 
         let _ = match probe.get_protocol() {
-            Probe_Protocol::HTTP | Probe_Protocol::HTTPS => execute_http_probe(probe, &mut host_probe_result),
-            Probe_Protocol::PING => execute_ping_probe(probe, &mut host_probe_result),
+            Probe_Protocol::HTTP => execute_http_probe(&format!("http://{}/{}", answer.data.address, probe.get_url_suffix()), &mut host_probe_result),
+            Probe_Protocol::HTTPS => execute_http_probe(&format!("https://{}/{}", answer.data.address, probe.get_url_suffix()), &mut host_probe_result),
+            Probe_Protocol::PING => execute_ping_probe(&mut host_probe_result),
         };
 
         if !host_probe_result.get_success() {
@@ -167,21 +173,11 @@ pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
     Ok(probe_result)
 }
 
-fn execute_http_probe(probe: &Probe, host_probe_result: &mut HostProbeResult) -> Result<(), String> {
-    let url = format!("{}://{}/{}",
-            match probe.get_protocol() {
-                Probe_Protocol::HTTP => "http",
-                Probe_Protocol::HTTPS => "https",
-                _ => "", //unreachable
-            },
-            probe.get_host(),
-            probe.get_url_suffix()
-        );
-
+fn execute_http_probe(url: &str, host_probe_result: &mut HostProbeResult) -> Result<(), String> {
     //submit request
     let client = Client::new();
     let start_time = time::now_utc();
-    let response = client.get(&url).send();
+    let response = client.get(url).send();
 
     //calculate execution time
     let execution_time = time::now_utc().sub(start_time);
@@ -193,7 +189,7 @@ fn execute_http_probe(probe: &Probe, host_probe_result: &mut HostProbeResult) ->
             {
                 //populate http status codes and message
                 let status_raw = response.status_raw();
-                host_probe_result.set_http_status_message(format!("{}", status_raw.1)); //TODO fix this
+                host_probe_result.set_http_status_message(format!("{}", status_raw.1)); //TODO fix status_raw.1 -> String using format!
                 let http_status_code = status_raw.0 as i32;
                 host_probe_result.set_http_status_code(http_status_code);
 
@@ -219,6 +215,6 @@ fn execute_http_probe(probe: &Probe, host_probe_result: &mut HostProbeResult) ->
     Ok(())
 }
 
-fn execute_ping_probe(probe: &Probe, host_probe_result: &mut HostProbeResult) -> Result<(), String> {
+fn execute_ping_probe(host_probe_result: &mut HostProbeResult) -> Result<(), String> {
     unimplemented!();
 }
