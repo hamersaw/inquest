@@ -30,14 +30,12 @@ fn main() {
                         .and_then(|d| d.decode())
                         .unwrap_or_else(|e| e.exit());
 
-    println!("parsing: {}", args.arg_filename);
     let mut file = File::open(args.arg_filename).unwrap();
 
     let mut input_stream = CodedInputStream::new(&mut file);
     loop {
         //read length of protobuf message
         let length = input_stream.read_uint32().unwrap();
-        println!("message length: {}", length);
 
         //read bytes for messages
         let mut bytes = Vec::new();

@@ -149,53 +149,15 @@ pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
     {
         let mut host_probe_result = HostProbeResult::new();
         host_probe_result.set_timestamp_sec(time::get_time().sec);
+        host_probe_result.set_success(true);
 
-        if probe.get_protocol() == Probe_Protocol::HTTP || probe.get_protocol() == Probe_Protocol::HTTPS {
-            //format the url
-            let url = format!("{}://{}/{}",
-                    match probe.get_protocol() {
-                        Probe_Protocol::HTTP => "http",
-                        Probe_Protocol::HTTPS => "https",
-                        _ => "", //unreachable
-                    },
-                    probe.get_host(),
-                    probe.get_url_suffix()
-                );
+        let _ = match probe.get_protocol() {
+            Probe_Protocol::HTTP | Probe_Protocol::HTTPS => execute_http_probe(probe, &mut host_probe_result),
+            Probe_Protocol::PING => execute_ping_probe(probe, &mut host_probe_result),
+        };
 
-            //submit request
-            let client = Client::new();
-            let start_time = time::now_utc();
-            let response = client.get(&url).send();
-
-            //calculate execution time
-            let execution_time = time::now_utc().sub(start_time);
-            host_probe_result.set_application_layer_latency_nanosec(execution_time.num_nanoseconds().unwrap());
-
-            //parse response
-            match response {
-                Ok(response) => {
-                    host_probe_result.set_success(true);
-
-                    {
-                        //populate http status codes and message
-                        let status_raw = response.status_raw();
-                        host_probe_result.set_http_status_message(format!("{}", status_raw.1)); //TODO fix this
-                        host_probe_result.set_http_status_code(status_raw.0 as i32);
-                    }
-
-                    {
-                        //populate application byte counts
-                        let byte_count = response.bytes().count();
-                        host_probe_result.set_application_bytes_received(byte_count as i32);
-                    }
-                },
-                Err(e) => {
-                    host_probe_result.set_success(false);
-                    host_probe_result.set_error_message(format!("{}", e));
-                },
-            }
-        } else if probe.get_protocol() == Probe_Protocol::PING {
-            //TODO execute ping
+        if !host_probe_result.get_success() {
+            probe_result.set_success(false);
         }
 
         repeated_host_probe_result.push(host_probe_result);
@@ -203,4 +165,60 @@ pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
 
     probe_result.set_host_probe_result(repeated_host_probe_result);
     Ok(probe_result)
+}
+
+fn execute_http_probe(probe: &Probe, host_probe_result: &mut HostProbeResult) -> Result<(), String> {
+    let url = format!("{}://{}/{}",
+            match probe.get_protocol() {
+                Probe_Protocol::HTTP => "http",
+                Probe_Protocol::HTTPS => "https",
+                _ => "", //unreachable
+            },
+            probe.get_host(),
+            probe.get_url_suffix()
+        );
+
+    //submit request
+    let client = Client::new();
+    let start_time = time::now_utc();
+    let response = client.get(&url).send();
+
+    //calculate execution time
+    let execution_time = time::now_utc().sub(start_time);
+    host_probe_result.set_application_layer_latency_nanosec(execution_time.num_nanoseconds().unwrap());
+
+    //parse response
+    match response {
+        Ok(response) => {
+            {
+                //populate http status codes and message
+                let status_raw = response.status_raw();
+                host_probe_result.set_http_status_message(format!("{}", status_raw.1)); //TODO fix this
+                let http_status_code = status_raw.0 as i32;
+                host_probe_result.set_http_status_code(http_status_code);
+
+                //check if status code is 200
+                if http_status_code != 200 {
+                    host_probe_result.set_success(false);
+                    host_probe_result.set_error_message("HTTP Status Code != 200".to_owned());
+                }
+            }
+
+            {
+                //populate application byte counts
+                let byte_count = response.bytes().count();
+                host_probe_result.set_application_bytes_received(byte_count as i32);
+            }
+        },
+        Err(e) => {
+            host_probe_result.set_success(false);
+            host_probe_result.set_error_message(format!("{}", e));
+        },
+    }
+
+    Ok(())
+}
+
+fn execute_ping_probe(probe: &Probe, host_probe_result: &mut HostProbeResult) -> Result<(), String> {
+    unimplemented!();
 }
