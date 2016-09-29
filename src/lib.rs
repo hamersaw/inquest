@@ -145,7 +145,7 @@ pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
 
     //DNS resolution
     let mut resolver = Resolver::new().unwrap();
-    let mut response = resolver.query(&probe.get_host().to_owned().into_bytes(), Class::IN, RecordType::A).unwrap(); //TODO fix &str -> String -> &[u8]
+    let mut response = resolver.query(&probe.get_host().as_bytes(), Class::IN, RecordType::A).unwrap();
 
     let mut repeated_host_probe_result: RepeatedField<HostProbeResult> = RepeatedField::new();
     for answer in response.answers::<A>() {
