@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate chan;
+extern crate curl;
 extern crate grpc;
 extern crate futures;
 extern crate futures_cpupool;
-extern crate hyper;
 extern crate protobuf;
 extern crate resolv;
 extern crate time;
@@ -15,13 +15,12 @@ pub mod inquest_pb_grpc;
 pub mod prober;
 pub mod writer;
 
-use std::io::Read;
 use std::ops::Sub;
 
 use inquest_pb::{CancelProbeRequest, DescribeProbeRequest, GatherProbesRequest, ListProbeIdsRequest, ScheduleProbeRequest};
 use inquest_pb::{CancelProbeReply, DescribeProbeReply, GatherProbesReply, ListProbeIdsReply, ScheduleProbeReply};
 use inquest_pb::{HostProbeResult, Probe, Probe_Protocol, ProbeResult};
-use hyper::Client;
+use curl::easy::{Easy, List};
 use protobuf::RepeatedField;
 use resolv::{Resolver, Class, RecordType};
 use resolv::record::A;
@@ -153,11 +152,10 @@ pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
         let mut host_probe_result = HostProbeResult::new();
         host_probe_result.set_timestamp_sec(time::get_time().sec);
         host_probe_result.set_ip_address(answer.data.address.octets().to_vec());
-        host_probe_result.set_success(true);
 
         let _ = match probe.get_protocol() {
-            Probe_Protocol::HTTP => execute_http_probe(&format!("http://{}/{}", answer.data.address, probe.get_url_suffix()), &mut host_probe_result),
-            Probe_Protocol::HTTPS => execute_http_probe(&format!("https://{}/{}", answer.data.address, probe.get_url_suffix()), &mut host_probe_result),
+            Probe_Protocol::HTTP => execute_http_probe(&format!("http://{}/{}", answer.data.address, probe.get_url_suffix()), probe.get_host(), &mut host_probe_result),
+            Probe_Protocol::HTTPS => execute_http_probe(&format!("https://{}/{}", answer.data.address, probe.get_url_suffix()), probe.get_host(), &mut host_probe_result),
             Probe_Protocol::PING => execute_ping_probe(&mut host_probe_result),
         };
 
@@ -172,43 +170,43 @@ pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
     Ok(probe_result)
 }
 
-fn execute_http_probe(url: &str, host_probe_result: &mut HostProbeResult) -> Result<(), String> {
-    //submit request
-    let client = Client::new();
-    let start_time = time::now_utc();
-    let response = client.get(url).send();
+fn execute_http_probe(url: &str, host: &str, host_probe_result: &mut HostProbeResult) -> Result<(), String> {
+    //create curl handle
+    let mut buffer = Vec::new();
+    let mut handle = Easy::new();    
+    {
+        //set handle parameters
+        handle.url(url).unwrap();
+        handle.follow_location(true).unwrap();
 
-    //calculate execution time
-    let execution_time = time::now_utc().sub(start_time);
-    host_probe_result.set_application_layer_latency_nanosec(execution_time.num_nanoseconds().unwrap());
+        let mut list = List::new();
+        list.append(format!("Host: {}", host).as_str()).unwrap();
+        handle.http_headers(list).unwrap();
 
-    //parse response
-    match response {
-        Ok(response) => {
-            {
-                //populate http status codes and message
-                let status_raw = response.status_raw();
-                host_probe_result.set_http_status_message(format!("{}", status_raw.1)); //TODO fix status_raw.1 -> String using format!
-                let http_status_code = status_raw.0 as i32;
-                host_probe_result.set_http_status_code(http_status_code);
+        //populate write callback function
+        let mut transfer = handle.transfer();
+        transfer.write_function(|data| {
+            buffer.extend_from_slice(data);
+            Ok(data.len())
+        }).unwrap();
+        
+        //submit request
+        let start_time = time::now_utc();
+        transfer.perform().unwrap();
+        let execution_time = time::now_utc().sub(start_time);
+        host_probe_result.set_application_layer_latency_nanosec(execution_time.num_nanoseconds().unwrap());
+    }
 
-                //check if status code is 200
-                if http_status_code != 200 {
-                    host_probe_result.set_success(false);
-                    host_probe_result.set_error_message("HTTP Status Code != 200".to_owned());
-                }
-            }
-
-            {
-                //populate application byte counts
-                let byte_count = response.bytes().count();
-                host_probe_result.set_application_bytes_received(byte_count as i32);
-            }
+    host_probe_result.set_application_bytes_received(buffer.len() as i32);
+    match handle.response_code() {
+        Ok(response_code) => {
+            host_probe_result.set_success(true);
+            host_probe_result.set_http_status_code(response_code as i32);
         },
         Err(e) => {
             host_probe_result.set_success(false);
             host_probe_result.set_error_message(format!("{}", e));
-        },
+        }
     }
 
     Ok(())
