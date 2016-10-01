@@ -156,8 +156,8 @@ pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
         host_probe_result.set_ip_address(answer.data.address.octets().to_vec());
 
         let _ = match probe.get_protocol() {
-            Probe_Protocol::HTTP => execute_http_probe(&format!("http://{}/{}", answer.data.address, probe.get_url_suffix()), probe.get_host(), &mut host_probe_result),
-            Probe_Protocol::HTTPS => execute_http_probe(&format!("https://{}/{}", answer.data.address, probe.get_url_suffix()), probe.get_host(), &mut host_probe_result),
+            Probe_Protocol::HTTP => execute_http_probe(&format!("http://{}/{}", answer.data.address, probe.get_url_suffix()), probe.get_host(), probe.get_follow_redirect(), &mut host_probe_result),
+            Probe_Protocol::HTTPS => execute_http_probe(&format!("https://{}/{}", answer.data.address, probe.get_url_suffix()), probe.get_host(), probe.get_follow_redirect(), &mut host_probe_result),
             Probe_Protocol::PING => execute_ping_probe(&mut host_probe_result),
         };
 
@@ -172,14 +172,15 @@ pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
     Ok(probe_result)
 }
 
-fn execute_http_probe(url: &str, host: &str, host_probe_result: &mut HostProbeResult) -> Result<(), String> {
+fn execute_http_probe(url: &str, host: &str, follow_redirect: bool, host_probe_result: &mut HostProbeResult) -> Result<(), String> {
     //create curl handle
     let mut buffer = Vec::new();
     let mut handle = Easy::new();    
     {
         //set handle parameters
         handle.url(url).unwrap();
-        handle.follow_location(true).unwrap();
+        
+        handle.follow_location(follow_redirect).unwrap();
 
         let mut list = List::new();
         list.append(format!("Host: {}", host).as_str()).unwrap();
