@@ -100,7 +100,7 @@ pub fn create_list_probe_ids_reply(probe_ids: Vec<String>) -> ListProbeIdsReply 
     reply
 }
 
-pub fn create_schedule_probe_request(probe_id: &str, http: bool, https: bool, host: &str, url_suffix: Option<String>, probe_interval_seconds: Option<i32>, probe_priority: Option<i32>) -> ScheduleProbeRequest {
+pub fn create_schedule_probe_request(probe_id: &str, http: bool, https: bool, host: &str, url_suffix: Option<String>, probe_interval_seconds: Option<i32>, probe_priority: Option<i32>, follow: bool) -> ScheduleProbeRequest {
     let mut probe = Probe::new();
     probe.set_probe_id(probe_id.to_owned());
     probe.set_protocol(
@@ -128,6 +128,8 @@ pub fn create_schedule_probe_request(probe_id: &str, http: bool, https: bool, ho
     if probe_priority.is_some() {
         probe.set_probe_priority(probe_priority.unwrap());
     }
+
+    probe.set_follow_redirect(follow);
 
     let mut request = ScheduleProbeRequest::new();
     request.set_probe(probe);

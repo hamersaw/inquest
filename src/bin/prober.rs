@@ -85,7 +85,7 @@ fn main() {
     let prober = ThreadPoolProberImpl::new(writer, prober_hostname, probe_threads);
 
     //open client and start scheduling probes
-    let client = ProbeCacheClient::new(host, port).unwrap();
+    let client = ProbeCacheClient::new(host, port, false).unwrap();
 
     let tick = chan::tick_ms(probe_poll_seconds * 1000);
     loop {

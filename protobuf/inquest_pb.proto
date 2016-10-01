@@ -23,6 +23,8 @@ message Probe {
     int32 probe_interval_seconds = 9;
     int32 probe_interval_post_failure_seconds = 10;
     int32 attempts_to_declare_failure = 11;
+
+    bool follow_redirect = 12;
 }
 
 message ProbeResult {

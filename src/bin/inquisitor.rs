@@ -13,11 +13,12 @@ Usage:
     inquisitor cancel <probe-id>
     inquisitor describe <probe-id>
     inquisitor list [--priority=<priority>]
-    inquisitor schedule <probe-id> (--http | --https) <host> [--url-suffix=<url-suffix>] [--interval=<interval>] [--priority=<priority>]
+    inquisitor schedule <probe-id> (--http | --https) <host> [--url-suffix=<url-suffix>] [--follow] [--interval=<interval>] [--priority=<priority>]
     inquisitor (-h | --help)
 
 Options:
     -h --help               Show this screen.
+    --follow                Follow HTTP/HTTPS redirects.
     --http                  Use HTTP for probe protocol.
     --https                 Use HTTPS for probe protocol.
     --interval=<interval>   Probe interval in seconds [default: 10].
@@ -35,6 +36,7 @@ struct Args {
     flag_interval: Option<i32>,
     flag_priority: Option<i32>,
     flag_url_suffix: Option<String>,
+    flag_follow: bool,
     flag_http: bool,
     flag_https: bool,
 }
@@ -44,7 +46,7 @@ fn main() {
                         .and_then(|d| d.decode())
                         .unwrap_or_else(|e| e.exit());
 
-    let client = SchedulerClient::new("localhost", 12289).unwrap();
+    let client = SchedulerClient::new("localhost", 12289, false).unwrap();
 
     if args.cmd_cancel {
         let request = inquest::create_cancel_probe_request(&args.arg_probe_id);
@@ -62,7 +64,7 @@ fn main() {
 
         println!("response: {:?}", response);
     } else if args.cmd_schedule {
-        let request = inquest::create_schedule_probe_request(&args.arg_probe_id, args.flag_http, args.flag_https, &args.arg_host, args.flag_url_suffix,  args.flag_interval, args.flag_priority);
+        let request = inquest::create_schedule_probe_request(&args.arg_probe_id, args.flag_http, args.flag_https, &args.arg_host, args.flag_url_suffix, args.flag_interval, args.flag_priority, args.flag_follow);
         let response = client.ScheduleProbe(request);
 
         println!("response: {:?}", response);
