@@ -25,8 +25,10 @@ ability to scheudle/cancel probes, list probe ids, and describe probes.
 Simple utility tool to parse probe result protobuf files.
 
 ##TODO
-- resolve IPv6 as well
+- add SSL/TLS support for inquisitor->server and prober->server communication
 - implement ping
-- stop prober when it can't connect to configuration server for awhile
+        https://github.com/libpnet/libpnet
+        https://tools.ietf.org/html/rfc792
+- resolve IPv6 as well
 - make configuration server a distributed application that's fully redundant
-- some security for users adding probes etc.
+- stop prober when it can't connect to configuration server for awhile
