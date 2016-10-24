@@ -18,7 +18,7 @@ do
 
     #TODO specify ip address and port of configuration server
     echo "scheduling $DOMAIN"
-    $INQUISITOR_BIN schedule $DOMAIN --https $DOMAIN --follow --interval=3600
+    $INQUISITOR_BIN schedule http.$DOMAIN --http $DOMAIN --follow --interval=3600
 
     #increment counter
     COUNT=$[COUNT+1]
@@ -28,4 +28,5 @@ do
     fi
 done < $TMP_DIR/top-1m.csv
 
+#perform some cleanup
 rm $TMP_DIR/top-1m.csv*

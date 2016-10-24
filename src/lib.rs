@@ -147,7 +147,14 @@ pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
 
     //DNS resolution
     let mut resolver = Resolver::new().unwrap();
-    let mut response = resolver.query(&probe.get_host().as_bytes(), Class::IN, RecordType::A).unwrap();
+    let mut response = match resolver.query(&probe.get_host().as_bytes(), Class::IN, RecordType::A) {
+        Ok(response) => response,
+        Err(e) => {
+            probe_result.set_success(false);
+            probe_result.set_error_message(format!("{:?}", e));
+            return Ok(probe_result);
+        },
+    };
 
     let mut repeated_host_probe_result: RepeatedField<HostProbeResult> = RepeatedField::new();
     for answer in response.answers::<A>() {
@@ -195,7 +202,14 @@ fn execute_http_probe(url: &str, host: &str, follow_redirect: bool, host_probe_r
         
         //submit request
         let start_time = time::now_utc();
-        transfer.perform().unwrap();
+        match transfer.perform() {
+            Ok(_) => {},
+            Err(e) => {
+                host_probe_result.set_success(false);
+                host_probe_result.set_error_message(format!("{}", e));
+                return Ok(());
+            },
+        }
         let execution_time = time::now_utc().sub(start_time);
         host_probe_result.set_application_layer_latency_nanosec(execution_time.num_nanoseconds().unwrap());
     }
