@@ -14,7 +14,6 @@ Usage:
     inquisitor describe <probe-id>
     inquisitor list [--priority=<priority>]
     inquisitor schedule <probe-id> (--http | --https) <host> [--url-suffix=<url-suffix>] [--follow] [--interval=<interval>] [--priority=<priority>]
-    inquisitor schedule-alexa (--http | https) <count> [--interval=<interval>]
     inquisitor (-h | --help)
 
 Options:
@@ -32,8 +31,6 @@ struct Args {
     cmd_describe: bool,
     cmd_list: bool,
     cmd_schedule: bool,
-    cmd_schedule_alexa: bool,
-    arc_count: u32,
     arg_host: String,
     arg_probe_id: String,
     flag_follow: bool,
@@ -71,7 +68,5 @@ fn main() {
         let response = client.ScheduleProbe(request);
 
         println!("response: {:?}", response);
-    } else if args.cmd_schedule_alexa {
-        //TODO download top 1m alexa sites
     }
 }
