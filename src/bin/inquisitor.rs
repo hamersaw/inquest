@@ -14,6 +14,7 @@ Usage:
     inquisitor describe <probe-id>
     inquisitor list [--priority=<priority>]
     inquisitor schedule <probe-id> (--http | --https) <host> [--url-suffix=<url-suffix>] [--follow] [--interval=<interval>] [--priority=<priority>]
+    inquisitor schedule-alexa (--http | https) <count> [--interval=<interval>]
     inquisitor (-h | --help)
 
 Options:
@@ -21,7 +22,7 @@ Options:
     --follow                Follow HTTP/HTTPS redirects.
     --http                  Use HTTP for probe protocol.
     --https                 Use HTTPS for probe protocol.
-    --interval=<interval>   Probe interval in seconds [default: 10].
+    --interval=<interval>   Probe interval in seconds [default: 3600].
     --priority=<priority>   Probe priority [default: 0].
 ";
 
@@ -31,14 +32,16 @@ struct Args {
     cmd_describe: bool,
     cmd_list: bool,
     cmd_schedule: bool,
-    arg_probe_id: String,
+    cmd_schedule_alexa: bool,
+    arc_count: u32,
     arg_host: String,
-    flag_interval: Option<i32>,
-    flag_priority: Option<i32>,
-    flag_url_suffix: Option<String>,
+    arg_probe_id: String,
     flag_follow: bool,
     flag_http: bool,
     flag_https: bool,
+    flag_interval: Option<i32>,
+    flag_priority: Option<i32>,
+    flag_url_suffix: Option<String>,
 }
 
 fn main() {
@@ -68,5 +71,7 @@ fn main() {
         let response = client.ScheduleProbe(request);
 
         println!("response: {:?}", response);
+    } else if args.cmd_schedule_alexa {
+        //TODO download top 1m alexa sites
     }
 }

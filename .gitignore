@@ -1,4 +1,2 @@
 Cargo.lock
 target
-src/inquest_pb.rs
-src/inquest_pb_grpc.rs
