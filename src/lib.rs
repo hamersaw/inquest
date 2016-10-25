@@ -132,7 +132,9 @@ pub fn create_schedule_probe_request(probe_id: &str, http: bool, https: bool, ho
     probe.set_follow_redirect(follow);
 
     let mut request = ScheduleProbeRequest::new();
-    request.set_probe(probe);
+    let mut repeated_probe = RepeatedField::new();
+    repeated_probe.push(probe);
+    request.set_probe(repeated_probe);
     request
 }
 

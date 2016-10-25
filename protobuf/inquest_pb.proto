@@ -85,7 +85,7 @@ message ListProbeIdsReply {
 }
 
 message ScheduleProbeRequest {
-    Probe probe = 2;
+    repeated Probe probe = 2;
 }
 
 message ScheduleProbeReply {

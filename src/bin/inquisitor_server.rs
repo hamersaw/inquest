@@ -120,28 +120,23 @@ impl Scheduler for SchedulerImpl {
     }
 
     fn ScheduleProbe(&self, request: ScheduleProbeRequest) -> GrpcResult<ScheduleProbeReply> {
-        //check for field 'probe'
-        if !request.has_probe() {
-            return Err(GrpcError::Other("request field probe is required"));
+        for probe in request.get_probe() {
+            //check for field 'probe_id'
+            if !probe.has_probe_id() {
+                return Err(GrpcError::Other("request field probe_id is required"));
+            }
+
+            let probe_id = probe.get_probe_id();
+
+            //check if probe already exists
+            let mut probe_map = self.probe_map.write().unwrap();
+            if probe_map.contains_key(probe_id) {
+                return Err(GrpcError::Other("probe id already exists"));
+            }
+
+            //add probe to map
+            probe_map.insert(probe_id.to_owned(), probe.to_owned());
         }
-
-        let probe = request.get_probe();
-
-        //check for field 'probe_id'
-        if !probe.has_probe_id() {
-            return Err(GrpcError::Other("request field probe_id is required"));
-        }
-
-        let probe_id = probe.get_probe_id();
-
-        //check if probe already exists
-        let mut probe_map = self.probe_map.write().unwrap();
-        if probe_map.contains_key(probe_id) {
-            return Err(GrpcError::Other("probe id already exists"));
-        }
-
-        //add probe to map
-        probe_map.insert(probe_id.to_owned(), probe.to_owned());
 
         Ok(inquest::create_schedule_probe_reply())
     }
