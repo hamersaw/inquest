@@ -221,12 +221,11 @@ fn execute_http_probe(url: &str, host: &str, follow_redirect: bool, host_probe_r
     {
         //set handle parameters
         handle.url(url).unwrap();
-        
         handle.follow_location(follow_redirect).unwrap();
 
-        let mut list = List::new();
+        /*let mut list = List::new();
         list.append(format!("Host: {}", host).as_str()).unwrap();
-        handle.http_headers(list).unwrap();
+        handle.http_headers(list).unwrap();*/
 
         //populate write callback function
         let mut transfer = handle.transfer();
@@ -245,6 +244,7 @@ fn execute_http_probe(url: &str, host: &str, follow_redirect: bool, host_probe_r
                 return Ok(());
             },
         }
+
         let execution_time = time::now_utc().sub(start_time);
         host_probe_result.set_application_layer_latency_nanosec(execution_time.num_nanoseconds().unwrap());
     }
