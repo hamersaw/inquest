@@ -23,9 +23,7 @@
 pub trait Scheduler {
     fn CancelProbe(&self, p: super::inquest_pb::CancelProbeRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::CancelProbeReply>;
 
-    fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::DescribeProbeReply>;
-
-    fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::ListProbeIdsReply>;
+    fn Search(&self, p: super::inquest_pb::SearchRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::SearchReply>;
 
     fn ScheduleProbe(&self, p: super::inquest_pb::ScheduleProbeRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::ScheduleProbeReply>;
 }
@@ -33,9 +31,7 @@ pub trait Scheduler {
 pub trait SchedulerAsync {
     fn CancelProbe(&self, p: super::inquest_pb::CancelProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::CancelProbeReply>;
 
-    fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::DescribeProbeReply>;
-
-    fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::ListProbeIdsReply>;
+    fn Search(&self, p: super::inquest_pb::SearchRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::SearchReply>;
 
     fn ScheduleProbe(&self, p: super::inquest_pb::ScheduleProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::ScheduleProbeReply>;
 }
@@ -61,12 +57,8 @@ impl Scheduler for SchedulerClient {
         ::futures::Future::wait(self.async_client.CancelProbe(p))
     }
 
-    fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::DescribeProbeReply> {
-        ::futures::Future::wait(self.async_client.DescribeProbe(p))
-    }
-
-    fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::ListProbeIdsReply> {
-        ::futures::Future::wait(self.async_client.ListProbeIds(p))
+    fn Search(&self, p: super::inquest_pb::SearchRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::SearchReply> {
+        ::futures::Future::wait(self.async_client.Search(p))
     }
 
     fn ScheduleProbe(&self, p: super::inquest_pb::ScheduleProbeRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::ScheduleProbeReply> {
@@ -79,8 +71,7 @@ impl Scheduler for SchedulerClient {
 pub struct SchedulerAsyncClient {
     grpc_client: ::grpc::client::GrpcClient,
     method_CancelProbe: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::CancelProbeRequest, super::inquest_pb::CancelProbeReply>>,
-    method_DescribeProbe: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::DescribeProbeRequest, super::inquest_pb::DescribeProbeReply>>,
-    method_ListProbeIds: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::ListProbeIdsRequest, super::inquest_pb::ListProbeIdsReply>>,
+    method_Search: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::SearchRequest, super::inquest_pb::SearchReply>>,
     method_ScheduleProbe: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::ScheduleProbeRequest, super::inquest_pb::ScheduleProbeReply>>,
 }
 
@@ -95,14 +86,8 @@ impl SchedulerAsyncClient {
                     req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                     resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                 }),
-                method_DescribeProbe: ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
-                    name: "/Scheduler/DescribeProbe".to_string(),
-                    streaming: ::grpc::method::GrpcStreaming::Unary,
-                    req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
-                    resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
-                }),
-                method_ListProbeIds: ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
-                    name: "/Scheduler/ListProbeIds".to_string(),
+                method_Search: ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
+                    name: "/Scheduler/Search".to_string(),
                     streaming: ::grpc::method::GrpcStreaming::Unary,
                     req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                     resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
@@ -123,12 +108,8 @@ impl SchedulerAsync for SchedulerAsyncClient {
         self.grpc_client.call_unary(p, self.method_CancelProbe.clone())
     }
 
-    fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::DescribeProbeReply> {
-        self.grpc_client.call_unary(p, self.method_DescribeProbe.clone())
-    }
-
-    fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::ListProbeIdsReply> {
-        self.grpc_client.call_unary(p, self.method_ListProbeIds.clone())
+    fn Search(&self, p: super::inquest_pb::SearchRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::SearchReply> {
+        self.grpc_client.call_unary(p, self.method_Search.clone())
     }
 
     fn ScheduleProbe(&self, p: super::inquest_pb::ScheduleProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::ScheduleProbeReply> {
@@ -155,17 +136,10 @@ impl SchedulerAsync for SchedulerServerHandlerToAsync {
         })
     }
 
-    fn DescribeProbe(&self, p: super::inquest_pb::DescribeProbeRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::DescribeProbeReply> {
+    fn Search(&self, p: super::inquest_pb::SearchRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::SearchReply> {
         let h = self.handler.clone();
         ::grpc::rt::sync_to_async_unary(&self.cpupool, p, move |p| {
-            h.DescribeProbe(p)
-        })
-    }
-
-    fn ListProbeIds(&self, p: super::inquest_pb::ListProbeIdsRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::ListProbeIdsReply> {
-        let h = self.handler.clone();
-        ::grpc::rt::sync_to_async_unary(&self.cpupool, p, move |p| {
-            h.ListProbeIds(p)
+            h.Search(p)
         })
     }
 
@@ -214,26 +188,14 @@ impl SchedulerAsyncServer {
                 ),
                 ::grpc::server::ServerMethod::new(
                     ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
-                        name: "/Scheduler/DescribeProbe".to_string(),
+                        name: "/Scheduler/Search".to_string(),
                         streaming: ::grpc::method::GrpcStreaming::Unary,
                         req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                         resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                     }),
                     {
                         let handler_copy = handler_arc.clone();
-                        ::grpc::server::MethodHandlerUnary::new(move |p| handler_copy.DescribeProbe(p))
-                    },
-                ),
-                ::grpc::server::ServerMethod::new(
-                    ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
-                        name: "/Scheduler/ListProbeIds".to_string(),
-                        streaming: ::grpc::method::GrpcStreaming::Unary,
-                        req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
-                        resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
-                    }),
-                    {
-                        let handler_copy = handler_arc.clone();
-                        ::grpc::server::MethodHandlerUnary::new(move |p| handler_copy.ListProbeIds(p))
+                        ::grpc::server::MethodHandlerUnary::new(move |p| handler_copy.Search(p))
                     },
                 ),
                 ::grpc::server::ServerMethod::new(

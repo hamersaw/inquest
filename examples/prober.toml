@@ -4,9 +4,6 @@ prober_hostname = "test.netsec.colostate.edu"
 # Number of threads in the probing threadpool
 probe_threads = 8
 
-# Minimum priority of probes this prober will execute
-probe_priority = 0
-
 # Writer configuration for probe results
 [writer]
     # Writer type

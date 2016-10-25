@@ -17,10 +17,10 @@ pub mod writer;
 
 use std::ops::Sub;
 
-use inquest_pb::{CancelProbeRequest, DescribeProbeRequest, GatherProbesRequest, ListProbeIdsRequest, ScheduleProbeRequest};
-use inquest_pb::{CancelProbeReply, DescribeProbeReply, GatherProbesReply, ListProbeIdsReply, ScheduleProbeReply};
-use inquest_pb::{HostProbeResult, Probe, Probe_Protocol, ProbeResult};
-use curl::easy::{Easy, List};
+use inquest_pb::{CancelProbeRequest, GatherProbesRequest, SearchRequest, ScheduleProbeRequest};
+use inquest_pb::{CancelProbeReply, GatherProbesReply, SearchReply, ScheduleProbeReply};
+use inquest_pb::{Probe, Protocol, ProbeResult};
+use curl::easy::Easy;
 use protobuf::RepeatedField;
 use resolv::{Resolver, Class, RecordType};
 use resolv::record::A;
@@ -35,7 +35,7 @@ pub fn create_cancel_probe_reply() -> CancelProbeReply {
     CancelProbeReply::new()
 }
 
-pub fn create_describe_probe_request(probe_id: &str) -> DescribeProbeRequest {
+/*pub fn create_describe_probe_request(probe_id: &str) -> DescribeProbeRequest {
     let mut request = DescribeProbeRequest::new();
     request.set_probe_id(probe_id.to_owned());
     request
@@ -45,9 +45,9 @@ pub fn create_describe_probe_reply(probe: &Probe) -> DescribeProbeReply {
     let mut reply = DescribeProbeReply::new();
     reply.set_probe(probe.clone());
     reply
-}
+}*/
 
-pub fn create_gather_probes_request(probe_priority: Option<i32>, probe_ids: Vec<String>) -> GatherProbesRequest {
+pub fn create_gather_probes_request(probe_ids: Vec<String>) -> GatherProbesRequest {
     let mut repeated_probe_id: RepeatedField<String> = RepeatedField::new();
     for probe_id in probe_ids {
         repeated_probe_id.push(probe_id);
@@ -55,10 +55,6 @@ pub fn create_gather_probes_request(probe_priority: Option<i32>, probe_ids: Vec<
 
     let mut request = GatherProbesRequest::new();
     request.set_scheduled_probe_id(repeated_probe_id);
-    if probe_priority.is_some() {
-        request.set_probe_priority(probe_priority.unwrap());
-    }
-
 
     request
 }
@@ -80,7 +76,7 @@ pub fn create_gather_probes_reply(probes: Vec<&Probe>, probe_ids: Vec<&String>) 
     reply
 }
 
-pub fn create_list_probe_ids_request(probe_priority: Option<i32>) -> ListProbeIdsRequest {
+/*pub fn create_list_probe_ids_request(probe_priority: Option<i32>) -> ListProbeIdsRequest {
     let mut request = ListProbeIdsRequest::new();
     if probe_priority.is_some() {
         request.set_probe_priority(probe_priority.unwrap());
@@ -98,28 +94,25 @@ pub fn create_list_probe_ids_reply(probe_ids: Vec<String>) -> ListProbeIdsReply 
     let mut reply = ListProbeIdsReply::new();
     reply.set_probe_id(repeated_probe_id);
     reply
-}
+}*/
 
-pub fn create_schedule_probe_request(probe_id: &str, http: bool, https: bool, host: &str, url_suffix: Option<String>, probe_interval_seconds: Option<i32>, probe_priority: Option<i32>, follow: bool) -> ScheduleProbeRequest {
+/*pub fn create_schedule_probe_request(probe_id: &str, http: bool, https: bool, host: &str, url_suffix: Option<String>, probe_interval_seconds: Option<i32>, probe_priority: Option<i32>, follow: bool) -> ScheduleProbeRequest {
     let mut probe = Probe::new();
     probe.set_probe_id(probe_id.to_owned());
     probe.set_protocol(
             if http {
-                Probe_Protocol::HTTP
+                Protocol::HTTP
             } else if https {
-                Probe_Protocol::HTTPS
+                Protocol::HTTPS
             } else {
-                Probe_Protocol::HTTP
+                Protocol::HTTP
             }
         );
 
     probe.set_host(host.to_owned());
-    probe.set_url_suffix(
-            match url_suffix {
-                Some(url_suffix) => url_suffix,
-                None => "".to_owned(),
-            }
-        );
+    if url_suffix.is_some() {
+        probe.set_url_suffix(url_suffix);
+    }
 
     if probe_interval_seconds.is_some() {
         probe.set_probe_interval_seconds(probe_interval_seconds.unwrap());
@@ -136,6 +129,44 @@ pub fn create_schedule_probe_request(probe_id: &str, http: bool, https: bool, ho
     repeated_probe.push(probe);
     request.set_probe(repeated_probe);
     request
+}*/
+
+pub fn create_dns_probe(domain: &str, probe_interval_seconds: i32) -> Probe {
+    let mut probe = Probe::new();
+    probe.set_probe_interval_seconds(probe_interval_seconds);
+    probe.set_probe_interval_post_failure_seconds(probe_interval_seconds);
+
+    probe.set_protocol(Protocol::DNS);
+    probe.set_domain(domain.to_owned());
+
+    probe
+}
+
+pub fn create_http_probe(domain: &str, probe_interval_seconds: i32, url_suffix: Option<String>, follow: bool) -> Probe {
+    let mut probe = Probe::new();
+    probe.set_probe_interval_seconds(probe_interval_seconds);
+    probe.set_probe_interval_post_failure_seconds(probe_interval_seconds);
+
+    probe.set_protocol(Protocol::HTTP);
+    probe.set_domain(domain.to_owned());
+    
+    if url_suffix.is_some() {
+        probe.set_url_suffix(url_suffix.unwrap());
+    }
+    probe.set_follow_redirect(follow);
+
+    probe
+}
+
+pub fn create_schedule_probe_request(probes: Vec<Probe>) -> ScheduleProbeRequest {
+    let mut repeated_probe = RepeatedField::new(); 
+    for probe in probes {
+        repeated_probe.push(probe);
+    }
+
+    let mut schedule_probe_request = ScheduleProbeRequest::new();
+    schedule_probe_request.set_probe(repeated_probe);
+    schedule_probe_request
 }
 
 pub fn create_schedule_probe_reply() -> ScheduleProbeReply {
@@ -145,83 +176,49 @@ pub fn create_schedule_probe_reply() -> ScheduleProbeReply {
 pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
     let mut probe_result = ProbeResult::new();
     probe_result.set_probe_id(probe.get_probe_id().to_owned());
-    probe_result.set_success(true);
+    probe_result.set_timestamp_sec(time::get_time().sec);
 
-    let mut host_probe_result = HostProbeResult::new();
+    let _ = match probe.get_protocol() {
+        Protocol::DNS => execute_dns_probe(probe, &mut probe_result),
+        Protocol::HTTP => execute_http_probe(probe, &mut probe_result),
+        _ => Err("unsupported probe type".to_owned()),
+    };
+
+    Ok(probe_result)
+}
+
+fn execute_dns_probe(probe: &Probe, probe_result: &mut ProbeResult) -> Result<(), String> {
+    probe_result.set_protocol(Protocol::DNS);
 
     //DNS resolution
     let mut resolver = Resolver::new().unwrap();
-    match resolver.query(&probe.get_host().as_bytes(), Class::IN, RecordType::A) {
+    match resolver.query(&probe.get_domain().as_bytes(), Class::IN, RecordType::A) {
         Ok(mut response) => {
             let mut repeated_dns_answer = RepeatedField::new();
             for answer in response.answers::<A>() {
                 repeated_dns_answer.push(answer.data.address.octets().to_vec());
             }
             probe_result.set_dns_answer(repeated_dns_answer);
+
+            probe_result.set_success(true);
         },
         Err(e) => {
             probe_result.set_success(false);
             probe_result.set_error_message(format!("{:?}", e));
-            return Ok(probe_result);
         },
     };
 
-    let mut repeated_host_probe_result = RepeatedField::new();
-    host_probe_result.set_timestamp_sec(time::get_time().sec);
-    let _ = match probe.get_protocol() {
-        Probe_Protocol::HTTP => execute_http_probe(&format!("http://www.{}/{}", probe.get_host(), probe.get_url_suffix()), probe.get_host(), probe.get_follow_redirect(), &mut host_probe_result),
-        Probe_Protocol::HTTPS => execute_http_probe(&format!("https://www.{}/{}", probe.get_host(), probe.get_url_suffix()), probe.get_host(), probe.get_follow_redirect(), &mut host_probe_result),
-        Probe_Protocol::PING => execute_ping_probe(&mut host_probe_result),
-    };
-
-    repeated_host_probe_result.push(host_probe_result);
-
-    /*
-    OLD SECTION - WHEN PROBING BY IP ADDRESS
-
-    let mut resolver = Resolver::new().unwrap();
-    let mut response = match resolver.query(&probe.get_host().as_bytes(), Class::IN, RecordType::A) {
-        Ok(response) => response,
-        Err(e) => {
-            probe_result.set_success(false);
-            probe_result.set_error_message(format!("{:?}", e));
-            return Ok(probe_result);
-        },
-    };
-
-    let mut repeated_host_probe_result = RepeatedField::new();
-    for answer in response.answers::<A>() {
-        let mut host_probe_result = HostProbeResult::new();
-        host_probe_result.set_timestamp_sec(time::get_time().sec);
-        host_probe_result.set_ip_address(answer.data.address.octets().to_vec());
-
-        let _ = match probe.get_protocol() {
-            Probe_Protocol::HTTP => execute_http_probe(&format!("http://{}/{}", answer.data.address, probe.get_url_suffix()), probe.get_host(), probe.get_follow_redirect(), &mut host_probe_result),
-            Probe_Protocol::HTTPS => execute_http_probe(&format!("https://{}/{}", answer.data.address, probe.get_url_suffix()), probe.get_host(), probe.get_follow_redirect(), &mut host_probe_result),
-            Probe_Protocol::PING => execute_ping_probe(&mut host_probe_result),
-        };
-
-        if !host_probe_result.get_success() {
-            probe_result.set_success(false);
-        }
-
-        repeated_host_probe_result.push(host_probe_result);
-    }*/
-
-    probe_result.set_host_probe_result(repeated_host_probe_result);
-    Ok(probe_result)
+    Ok(())
 }
 
-fn execute_http_probe(url: &str, host: &str, follow_redirect: bool, host_probe_result: &mut HostProbeResult) -> Result<(), String> {
-    host_probe_result.set_url(url.to_owned());
-
+fn execute_http_probe(probe: &Probe, probe_result: &mut ProbeResult) -> Result<(), String> {
     //create curl handle
     let mut buffer = Vec::new();
     let mut handle = Easy::new();    
     {
         //set handle parameters
-        handle.url(url).unwrap();
-        handle.follow_location(follow_redirect).unwrap();
+        handle.url(&format!("http://www.{}/{}", probe.get_domain(), probe.get_url_suffix())).unwrap();
+        handle.follow_location(probe.get_follow_redirect()).unwrap();
 
         /*let mut list = List::new();
         list.append(format!("Host: {}", host).as_str()).unwrap();
@@ -239,31 +236,27 @@ fn execute_http_probe(url: &str, host: &str, follow_redirect: bool, host_probe_r
         match transfer.perform() {
             Ok(_) => {},
             Err(e) => {
-                host_probe_result.set_success(false);
-                host_probe_result.set_error_message(format!("{}", e));
+                probe_result.set_success(false);
+                probe_result.set_error_message(format!("{}", e));
                 return Ok(());
             },
         }
 
         let execution_time = time::now_utc().sub(start_time);
-        host_probe_result.set_application_layer_latency_nanosec(execution_time.num_nanoseconds().unwrap());
+        probe_result.set_application_layer_latency_nanosec(execution_time.num_nanoseconds().unwrap());
     }
 
-    host_probe_result.set_application_bytes_received(buffer.len() as i32);
+    probe_result.set_application_bytes_received(buffer.len() as i32);
     match handle.response_code() {
         Ok(response_code) => {
-            host_probe_result.set_success(true);
-            host_probe_result.set_http_status_code(response_code as i32);
+            probe_result.set_success(true);
+            probe_result.set_http_status_code(response_code as i32);
         },
         Err(e) => {
-            host_probe_result.set_success(false);
-            host_probe_result.set_error_message(format!("{}", e));
+            probe_result.set_success(false);
+            probe_result.set_error_message(format!("{}", e));
         }
     }
 
     Ok(())
-}
-
-fn execute_ping_probe(host_probe_result: &mut HostProbeResult) -> Result<(), String> {
-    unimplemented!();
 }

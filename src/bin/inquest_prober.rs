@@ -49,9 +49,6 @@ fn main() {
     let probe_threads = toml_table.lookup("probe_threads")
                         .expect("unable to find field 'probe_threads'")
                         .as_integer().expect("unable to parse probe_threads into integer") as usize;
-    let probe_priority = toml_table.lookup("probe_priority")
-                        .expect("unable to find field 'probe_priority'")
-                        .as_integer().expect("unable to parse probe_priority into integer") as i32;
     let writer_str = toml_table.lookup("writer.type")
                         .expect("unable to find field 'writer.type'")
                         .as_str().expect("unable to parse writer.type into &str");
@@ -87,11 +84,20 @@ fn main() {
     //open client and start scheduling probes
     let client = ProbeCacheClient::new(host, port, false).unwrap();
 
+    //schedule initial probes
+    let request = inquest::create_gather_probes_request(Vec::new());
+    let response = client.GatherProbes(request).unwrap();
+
+    for probe in response.get_probe() {
+        let _ = prober.schedule_probe(probe);
+    }
+
+    //start probe schedule poll loop
     let tick = chan::tick_ms(probe_poll_seconds * 1000);
     loop {
         chan_select! {
             tick.recv() => {
-                let request = inquest::create_gather_probes_request(Some(probe_priority), prober.get_probe_ids());
+                let request = inquest::create_gather_probes_request(prober.get_probe_ids());
                 let response = client.GatherProbes(request).unwrap();
 
                 //cancel probes

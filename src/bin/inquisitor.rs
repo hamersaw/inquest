@@ -11,33 +11,44 @@ Client application to inquest
 
 Usage:
     inquisitor cancel <probe-id>
-    inquisitor describe <probe-id>
-    inquisitor list [--priority=<priority>]
-    inquisitor schedule <probe-id> (--http | --https) <host> [--url-suffix=<url-suffix>] [--follow] [--interval=<interval>] [--priority=<priority>]
+    inquisitor search <domain> [--dns] [--http] [--https] [--ping] [--traceroute]
+    inquisitor schedule-dns <domain> [--interval=<interval>]
+    inquisitor schedule-http <domain> [--url-suffix=<url-suffix>] [--follow] [--interval=<interval>]
+    inquisitor schedule-https <domain> [--url-suffix=<url-suffix>] [--follow] [--interval=<interval>]
+    inquisitor schedule-ping <domain> [--interval=<interval>]
+    inquisitor schedule-traceroute <domain> [--interval=<interval>]
     inquisitor (-h | --help)
 
 Options:
-    -h --help               Show this screen.
-    --follow                Follow HTTP/HTTPS redirects.
-    --http                  Use HTTP for probe protocol.
-    --https                 Use HTTPS for probe protocol.
-    --interval=<interval>   Probe interval in seconds [default: 3600].
-    --priority=<priority>   Probe priority [default: 0].
+    --dns                       Search for probes using the DNS protocol.
+    --follow                    Follow HTTP/HTTPS redirects.
+    --http                      Search for probes using the HTTP protocol.
+    --https                     Search for probes using the HTTPS protocol.
+    --interval=<interval>       Probe interval in seconds [default: 3600].
+    --ping                      Search for probes using the PING protcol.
+    --traceroute                Search for probes using the TRACEROUTE protocol.
+    --url-suffix=<url_suffix>   Suffix for url.
+    -h --help                   Show this screen.
 ";
 
 #[derive(Debug, RustcDecodable)]
 struct Args {
     cmd_cancel: bool,
-    cmd_describe: bool,
-    cmd_list: bool,
-    cmd_schedule: bool,
-    arg_host: String,
+    cmd_search: bool,
+    cmd_schedule_dns: bool,
+    cmd_schedule_http: bool,
+    cmd_schedule_https: bool,
+    cmd_schedule_ping: bool,
+    cmd_schedule_traceroute: bool,
+    arg_domain: String,
     arg_probe_id: String,
+    flag_dns: bool,
     flag_follow: bool,
     flag_http: bool,
     flag_https: bool,
-    flag_interval: Option<i32>,
-    flag_priority: Option<i32>,
+    flag_interval: i32,
+    flag_ping: bool,
+    flag_traceroute: bool,
     flag_url_suffix: Option<String>,
 }
 
@@ -53,20 +64,21 @@ fn main() {
         let response = client.CancelProbe(request);
 
         println!("response: {:?}", response);
-    } else if args.cmd_describe {
-        let request = inquest::create_describe_probe_request(&args.arg_probe_id);
-        let response = client.DescribeProbe(request);
+    } else if args.cmd_search {
 
-        println!("response: {:?}", response);
-    } else if args.cmd_list {
-        let request = inquest::create_list_probe_ids_request(args.flag_priority);
-        let response = client.ListProbeIds(request);
+    } else if args.cmd_schedule_dns {
 
-        println!("response: {:?}", response);
-    } else if args.cmd_schedule {
-        let request = inquest::create_schedule_probe_request(&args.arg_probe_id, args.flag_http, args.flag_https, &args.arg_host, args.flag_url_suffix, args.flag_interval, args.flag_priority, args.flag_follow);
+    } else if args.cmd_schedule_http {
+        let probe = inquest::create_http_probe(&args.arg_domain, args.flag_interval, args.flag_url_suffix, args.flag_follow);
+        let request = inquest::create_schedule_probe_request(vec!(probe));
         let response = client.ScheduleProbe(request);
 
         println!("response: {:?}", response);
+    } else if args.cmd_schedule_https {
+
+    } else if args.cmd_schedule_ping {
+
+    } else if args.cmd_schedule_traceroute {
+
     }
 }

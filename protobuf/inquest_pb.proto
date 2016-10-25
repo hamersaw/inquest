@@ -3,7 +3,7 @@ syntax="proto3";
 /**
  * probe messages
  */
-message Probe {
+/*message Probe {
     string probe_id = 1;
     int32 probe_priority = 2;
     int64 version_number = 3;
@@ -49,6 +49,61 @@ message HostProbeResult {
     int32 http_status_code = 6;
     string http_status_message = 7;
     int32 application_bytes_received = 8;
+}*/
+
+/**
+ * probe messages
+ */
+enum Protocol {
+    DNS = 0;
+    HTTP = 1;
+    HTTPS = 2;
+    PING = 3;
+    TRACEROUTE = 4;
+}
+
+message Probe {
+    string probe_id = 1;
+    int32 probe_interval_seconds = 2;
+    int32 probe_interval_post_failure_seconds = 3;
+    int32 attempts_to_declare_failure = 4;
+
+    Protocol protocol = 5;
+    string domain = 6;
+
+    //DNS specific
+    
+    //HTTP/HTTPS specific
+    int32 port = 7;
+    string url_suffix = 8;
+    bool follow_redirect = 9;
+
+    //PING specific
+
+    //TRACEROUTE specific
+}
+
+message ProbeResult {
+    string probe_id = 1;
+    string prober_hostname = 2;
+    Protocol protocol = 3;
+
+    int64 timestamp_sec = 4;
+    bool success = 5;
+    string error_message = 6;
+    int64 application_layer_latency_nanosec = 7;
+
+    //DNS specific
+    repeated bytes dns_answer = 8;
+
+    //HTTP/HTTPS specific
+    int32 http_status_code = 9;
+    string http_status_message = 10;    
+    int32 application_bytes_received = 11;
+
+    //PING specific
+
+    //TRACEROUTE specific
 }
 
 /**
@@ -56,8 +111,7 @@ message HostProbeResult {
  */
 service Scheduler {
     rpc CancelProbe(CancelProbeRequest) returns (CancelProbeReply) {}
-    rpc DescribeProbe(DescribeProbeRequest) returns (DescribeProbeReply) {}
-    rpc ListProbeIds(ListProbeIdsRequest) returns (ListProbeIdsReply) {}
+    rpc Search(SearchRequest) returns (SearchReply) {}
     rpc ScheduleProbe(ScheduleProbeRequest)  returns (ScheduleProbeReply) {}
 }
 
@@ -68,20 +122,13 @@ message CancelProbeRequest {
 message CancelProbeReply {
 }
 
-message DescribeProbeRequest {
-    string probe_id = 1;
+message SearchRequest {
+    repeated Protocol protocol = 1;
+    string domain = 2;
 }
 
-message DescribeProbeReply {
-    Probe probe = 1;
-}
-
-message ListProbeIdsRequest {
-    int32 probe_priority = 1;
-}
-
-message ListProbeIdsReply {
-    repeated string probe_id = 1;
+message SearchReply {
+    repeated Probe probe = 1;
 }
 
 message ScheduleProbeRequest {
@@ -99,7 +146,6 @@ service ProbeCache {
 }
 
 message GatherProbesRequest {
-    int32 probe_priority = 1;
     repeated string scheduled_probe_id = 2;
 }
 

@@ -7,8 +7,8 @@ use std::sync::{Arc, RwLock};
 use grpc::error::GrpcError;
 use grpc::result::GrpcResult;
 
-use inquest::inquest_pb::{CancelProbeRequest, DescribeProbeRequest, GatherProbesRequest, ListProbeIdsRequest, ScheduleProbeRequest};
-use inquest::inquest_pb::{CancelProbeReply, DescribeProbeReply, GatherProbesReply, ListProbeIdsReply, ScheduleProbeReply};
+use inquest::inquest_pb::{CancelProbeRequest, GatherProbesRequest, SearchRequest, ScheduleProbeRequest};
+use inquest::inquest_pb::{CancelProbeReply, GatherProbesReply, SearchReply, ScheduleProbeReply};
 use inquest::inquest_pb::Probe;
 use inquest::inquest_pb_grpc::{ProbeCache, ProbeCacheServer, Scheduler, SchedulerServer};
 
@@ -36,7 +36,6 @@ impl ProbeCacheImpl {
 
 impl ProbeCache for ProbeCacheImpl {
     fn GatherProbes(&self, request: GatherProbesRequest) -> GrpcResult<GatherProbesReply> {
-        let probe_priority = request.get_probe_priority(); //if request has no priority 0 is returned
         let probe_ids = request.get_scheduled_probe_id();
         
         //get all the probes where probe has priority over what is provided
@@ -49,7 +48,7 @@ impl ProbeCache for ProbeCacheImpl {
                         }
                     }
 
-                    probe.get_probe_priority() >= probe_priority
+                    true
                 }).collect();
 
         let cancel_probes = probe_ids.iter()
@@ -89,44 +88,19 @@ impl Scheduler for SchedulerImpl {
         Ok(inquest::create_cancel_probe_reply())
     }
 
-    fn DescribeProbe(&self, request: DescribeProbeRequest) -> GrpcResult<DescribeProbeReply> {
-        //check for a probe id
-        if !request.has_probe_id() {
-            return Err(GrpcError::Other("request field probe_id is required"));
-        }
-
-        //retrieve probe if exists
-        let probe_map = self.probe_map.read().unwrap();
-        let probe = match probe_map.get(request.get_probe_id()) {
-            Some(probe) => probe,
-            None => return Err(GrpcError::Other("probe does not exist")),
-        };
-
-        Ok(inquest::create_describe_probe_reply(probe))
-    }
-
-    fn ListProbeIds(&self, request: ListProbeIdsRequest) -> GrpcResult<ListProbeIdsReply> {
-        //get probe priority
-        let probe_priority = request.get_probe_priority(); //if request has no priority 0 is returned
-
-        //get all the probe ids where probe has priority over what is provided
-        let probe_map = self.probe_map.read().unwrap();
-        let probe_ids = probe_map.iter()
-                .filter(|entry| entry.1.get_probe_priority() >= probe_priority)
-                .map(|entry| entry.0.to_owned())
-                .collect::<Vec<_>>();
-
-        Ok(inquest::create_list_probe_ids_reply(probe_ids))
+    fn Search(&self, request: SearchRequest) -> GrpcResult<SearchReply> {
+        Ok(SearchReply::new())
     }
 
     fn ScheduleProbe(&self, request: ScheduleProbeRequest) -> GrpcResult<ScheduleProbeReply> {
         for probe in request.get_probe() {
             //check for field 'probe_id'
-            if !probe.has_probe_id() {
+            /*if !probe.has_probe_id() {
                 return Err(GrpcError::Other("request field probe_id is required"));
             }
 
-            let probe_id = probe.get_probe_id();
+            let probe_id = probe.get_probe_id();*/
+            probe.set_probe_id("SINGLE PROBE");
 
             //check if probe already exists
             let mut probe_map = self.probe_map.write().unwrap();
