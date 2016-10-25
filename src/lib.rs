@@ -145,7 +145,38 @@ pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
     probe_result.set_probe_id(probe.get_probe_id().to_owned());
     probe_result.set_success(true);
 
+    let mut host_probe_result = HostProbeResult::new();
+
     //DNS resolution
+    let mut resolver = Resolver::new().unwrap();
+    match resolver.query(&probe.get_host().as_bytes(), Class::IN, RecordType::A) {
+        Ok(mut response) => {
+            let mut repeated_dns_answer = RepeatedField::new();
+            for answer in response.answers::<A>() {
+                repeated_dns_answer.push(answer.data.address.octets().to_vec());
+            }
+            probe_result.set_dns_answer(repeated_dns_answer);
+        },
+        Err(e) => {
+            probe_result.set_success(false);
+            probe_result.set_error_message(format!("{:?}", e));
+            return Ok(probe_result);
+        },
+    };
+
+    let mut repeated_host_probe_result = RepeatedField::new();
+    host_probe_result.set_timestamp_sec(time::get_time().sec);
+    let _ = match probe.get_protocol() {
+        Probe_Protocol::HTTP => execute_http_probe(&format!("http://{}/{}", probe.get_host(), probe.get_url_suffix()), probe.get_host(), probe.get_follow_redirect(), &mut host_probe_result),
+        Probe_Protocol::HTTPS => execute_http_probe(&format!("https://{}/{}", probe.get_host(), probe.get_url_suffix()), probe.get_host(), probe.get_follow_redirect(), &mut host_probe_result),
+        Probe_Protocol::PING => execute_ping_probe(&mut host_probe_result),
+    };
+
+    repeated_host_probe_result.push(host_probe_result);
+
+    /*
+    OLD SECTION - WHEN PROBING BY IP ADDRESS
+
     let mut resolver = Resolver::new().unwrap();
     let mut response = match resolver.query(&probe.get_host().as_bytes(), Class::IN, RecordType::A) {
         Ok(response) => response,
@@ -156,7 +187,7 @@ pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
         },
     };
 
-    let mut repeated_host_probe_result: RepeatedField<HostProbeResult> = RepeatedField::new();
+    let mut repeated_host_probe_result = RepeatedField::new();
     for answer in response.answers::<A>() {
         let mut host_probe_result = HostProbeResult::new();
         host_probe_result.set_timestamp_sec(time::get_time().sec);
@@ -173,13 +204,15 @@ pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
         }
 
         repeated_host_probe_result.push(host_probe_result);
-    }
+    }*/
 
     probe_result.set_host_probe_result(repeated_host_probe_result);
     Ok(probe_result)
 }
 
 fn execute_http_probe(url: &str, host: &str, follow_redirect: bool, host_probe_result: &mut HostProbeResult) -> Result<(), String> {
+    host_probe_result.set_url(url.to_owned());
+
     //create curl handle
     let mut buffer = Vec::new();
     let mut handle = Easy::new();    

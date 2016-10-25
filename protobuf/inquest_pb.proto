@@ -34,7 +34,8 @@ message ProbeResult {
     
     bool success = 4;
     string error_message = 5;
-    repeated HostProbeResult host_probe_result = 6;
+    repeated bytes dns_answer = 6;
+    repeated HostProbeResult host_probe_result = 7;
 }
 
 message HostProbeResult {
@@ -43,7 +44,7 @@ message HostProbeResult {
     bool success = 3;
     string error_message = 4;
 
-    bytes ip_address = 5;
+    string url = 5;
 
     int32 http_status_code = 6;
     string http_status_message = 7;
