@@ -117,7 +117,7 @@ pub fn create_schedule_probe_request(probe_id: &str, http: bool, https: bool, ho
     probe.set_url_suffix(
             match url_suffix {
                 Some(url_suffix) => url_suffix,
-                None => "index.html".to_owned(),
+                None => "".to_owned(),
             }
         );
 
@@ -169,8 +169,8 @@ pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
     let mut repeated_host_probe_result = RepeatedField::new();
     host_probe_result.set_timestamp_sec(time::get_time().sec);
     let _ = match probe.get_protocol() {
-        Probe_Protocol::HTTP => execute_http_probe(&format!("http://{}/{}", probe.get_host(), probe.get_url_suffix()), probe.get_host(), probe.get_follow_redirect(), &mut host_probe_result),
-        Probe_Protocol::HTTPS => execute_http_probe(&format!("https://{}/{}", probe.get_host(), probe.get_url_suffix()), probe.get_host(), probe.get_follow_redirect(), &mut host_probe_result),
+        Probe_Protocol::HTTP => execute_http_probe(&format!("http://www.{}/{}", probe.get_host(), probe.get_url_suffix()), probe.get_host(), probe.get_follow_redirect(), &mut host_probe_result),
+        Probe_Protocol::HTTPS => execute_http_probe(&format!("https://www.{}/{}", probe.get_host(), probe.get_url_suffix()), probe.get_host(), probe.get_follow_redirect(), &mut host_probe_result),
         Probe_Protocol::PING => execute_ping_probe(&mut host_probe_result),
     };
 
