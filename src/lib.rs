@@ -88,24 +88,25 @@ pub fn create_search_request(domain: &str, dns: bool, http: bool, https: bool, p
     let mut request = SearchRequest::new();
     request.set_domain(domain.to_owned());
     
+    let empty = !dns && !http && !https && !ping && !traceroute;
     let mut repeated_protocol = Vec::new();
-    if dns {
+    if empty || dns {
         repeated_protocol.push(Protocol::DNS);
     }
     
-    if http {
+    if empty || http {
         repeated_protocol.push(Protocol::HTTP);
     }
     
-    if https {
+    if empty || https {
         repeated_protocol.push(Protocol::HTTPS);
     }
     
-    if ping {
+    if empty || ping {
         repeated_protocol.push(Protocol::PING);
     }
 
-    if traceroute {
+    if empty || traceroute {
         repeated_protocol.push(Protocol::TRACEROUTE);
     }
 
@@ -113,12 +114,12 @@ pub fn create_search_request(domain: &str, dns: bool, http: bool, https: bool, p
     request
 }
 
-pub fn create_search_reply(probes: Vec<&Probe>) -> SearchReply {
+pub fn create_search_reply(probes: Vec<Probe>) -> SearchReply {
     let mut reply = SearchReply::new();
     
     let mut repeated_probe = RepeatedField::new();
     for probe in probes {
-        repeated_probe.push(probe.clone());
+        repeated_probe.push(probe);
     }
     reply.set_probe(repeated_probe);
 

@@ -80,25 +80,56 @@ impl SchedulerImpl {
 
 impl Scheduler for SchedulerImpl {
     fn CancelProbe(&self, request: CancelProbeRequest) -> GrpcResult<CancelProbeReply> {
-        /*//check for a probe id
+        //check for a probe id
         if !request.has_probe_id() {
             return Err(GrpcError::Other("request field probe_id is required"));
         }
 
+        //check for probe in probe index
+        let mut probe_index = self.probe_index.write().unwrap();
+        let (protocol, domain) = match probe_index.remove(request.get_probe_id()) {
+            Some(x) => x,
+            None => return Err(GrpcError::Other("probe does not exist")),
+        };
+
         //remove probe if exists
         let mut probe_map = self.probe_map.write().unwrap();
-        if probe_map.remove(request.get_probe_id()).is_none() {
-            return Err(GrpcError::Other("probe does not exist"));
+        let mut map = probe_map.get_mut(&protocol).unwrap();
+        let mut probes = map.get_mut(&domain).unwrap();
+
+        let mut index = 0;
+        for (i, p) in probes.iter().enumerate() {
+            if p.get_probe_id() == request.get_probe_id() {
+                index = i;
+                break;
+            }
         }
 
-        Ok(inquest::create_cancel_probe_reply())*/
-        Err(GrpcError::Other("unimplemented"))
+        probes.remove(index);
+
+        Ok(inquest::create_cancel_probe_reply())
     }
 
     fn Search(&self, request: SearchRequest) -> GrpcResult<SearchReply> {
-        /*println!("TODO search: {:?}", request);
-        Ok(SearchReply::new())*/
-        Err(GrpcError::Other("unimplemented"))
+        let mut probe_vec = Vec::new();
+        for protocol in request.get_protocol() {
+            let probe_map = self.probe_map.read().unwrap();
+            let map = match probe_map.get(protocol) {
+                Some(map) => map,
+                None => continue,
+            };
+
+            let probes = match map.get(request.get_domain()) {
+                Some(probes) => probes,
+                None => continue,
+            };
+
+            for p in probes {
+                probe_vec.push(p.clone());
+            }
+        }
+
+        Ok(inquest::create_search_reply(probe_vec))
     }
 
     fn ScheduleProbe(&self, request: ScheduleProbeRequest) -> GrpcResult<ScheduleProbeReply> {
