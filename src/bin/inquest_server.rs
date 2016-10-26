@@ -2,7 +2,6 @@ extern crate grpc;
 extern crate inquest;
 
 use std::collections::{HashMap, BTreeMap};
-use std::hash;
 use std::sync::{Arc, RwLock};
 
 use grpc::error::GrpcError;
@@ -22,7 +21,7 @@ fn main() {
         let mut counter = 0;
         let delta = u64::max_value() / bucket_count;
         let mut probe_map = probe_map.write().unwrap();
-        for i in 0..bucket_count {
+        for _ in 0..bucket_count {
             probe_map.insert(counter, HashMap::new());
             counter += delta;
         }
@@ -102,51 +101,58 @@ impl Scheduler for SchedulerImpl {
         }
 
         let mut domain_map = probe_map.get_mut(&bucket_key).unwrap();
-        let mut protocol_map = match domain_map.get_mut(request.get_domain()) {
-            Some(protocol_map) => protocol_map,
-            None => return Err(GrpcError::Other("domain doesn't exist")),
-        };
+        let remove_domain;
+        {
+            let mut protocol_map = match domain_map.get_mut(request.get_domain()) {
+                Some(protocol_map) => protocol_map,
+                None => return Err(GrpcError::Other("domain doesn't exist")),
+            };
 
-        //loop over protocols
-        for protocol in request.get_protocol() {
-            let mut remove_protocol = false;
-            {
-                let mut probes = match protocol_map.get_mut(protocol) {
-                    Some(probes) => probes,
-                    None => continue,
-                };
+            //loop over protocols
+            for protocol in request.get_protocol() {
+                let remove_protocol;
+                {
+                    let mut probes = match protocol_map.get_mut(protocol) {
+                        Some(probes) => probes,
+                        None => continue,
+                    };
 
-                match protocol {
-                    &Protocol::HTTP => {
-                        if request.has_url_suffix() {
-                            let mut index = -1;
-                            for (i, p) in probes.iter().enumerate() {
-                                if p.get_url_suffix() == request.get_url_suffix() {
-                                    index = i as i16;
-                                    break;
+                    match protocol {
+                        &Protocol::HTTP => {
+                            if request.has_url_suffix() {
+                                let mut index = -1;
+                                for (i, p) in probes.iter().enumerate() {
+                                    if p.get_url_suffix() == request.get_url_suffix() {
+                                        index = i as i16;
+                                        break;
+                                    }
                                 }
-                            }
 
-                            if index != -1 {
-                                probes.remove(index as usize);
+                                if index != -1 {
+                                    probes.remove(index as usize);
+                                }
+                            } else {
+                                probes.clear();
                             }
-                        } else {
-                            probes.clear();
-                        }
-                    },
-                    _ => probes.clear(),
+                        },
+                        _ => probes.clear(),
+                    }
+
+                    remove_protocol = probes.len() == 0;
                 }
 
-                //check if there are no probes left for the protocol
-                if probes.len() == 0 {
-                    remove_protocol = true;
+                //remove protocol if there are no probes scheduled
+                if remove_protocol {
+                    protocol_map.remove(protocol);
                 }
             }
 
-            //remove protocol if there are no probes scheduled
-            if remove_protocol {
-                protocol_map.remove(protocol);
-            }
+            remove_domain = protocol_map.len() == 0;
+        }
+
+        //remove domain if there are no probes scheduled
+        if remove_domain {
+            domain_map.remove(request.get_domain());
         }
 
         Ok(inquest::create_cancel_probe_reply())
@@ -154,7 +160,7 @@ impl Scheduler for SchedulerImpl {
 
     fn Search(&self, request: SearchRequest) -> GrpcResult<SearchReply> {
         let key = inquest::compute_domain_hash(request.get_domain());
-        let mut probe_map = self.probe_map.write().unwrap();
+        let probe_map = self.probe_map.read().unwrap();
 
         //determine correct bucket key
         let mut bucket_key = 0;
@@ -167,8 +173,8 @@ impl Scheduler for SchedulerImpl {
         }
 
         //find map containing protocols pertaining to the given domain
-        let mut domain_map = probe_map.get_mut(&bucket_key).unwrap();
-        let mut protocol_map = match domain_map.get_mut(request.get_domain()) {
+        let domain_map = probe_map.get(&bucket_key).unwrap();
+        let protocol_map = match domain_map.get(request.get_domain()) {
             Some(protocol_map) => protocol_map,
             None => return Err(GrpcError::Other("domain does not exist")),
         };
