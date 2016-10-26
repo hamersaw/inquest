@@ -25,6 +25,9 @@ use protobuf::RepeatedField;
 use resolv::{Resolver, Class, RecordType};
 use resolv::record::A;
 
+/*
+ * CancelProbe Messages
+ */
 pub fn create_cancel_probe_request(probe_id: &str) -> CancelProbeRequest {
     let mut request = CancelProbeRequest::new();
     request.set_probe_id(probe_id.to_owned());
@@ -34,18 +37,6 @@ pub fn create_cancel_probe_request(probe_id: &str) -> CancelProbeRequest {
 pub fn create_cancel_probe_reply() -> CancelProbeReply {
     CancelProbeReply::new()
 }
-
-/*pub fn create_describe_probe_request(probe_id: &str) -> DescribeProbeRequest {
-    let mut request = DescribeProbeRequest::new();
-    request.set_probe_id(probe_id.to_owned());
-    request
-}
-
-pub fn create_describe_probe_reply(probe: &Probe) -> DescribeProbeReply {
-    let mut reply = DescribeProbeReply::new();
-    reply.set_probe(probe.clone());
-    reply
-}*/
 
 pub fn create_gather_probes_request(probe_ids: Vec<String>) -> GatherProbesRequest {
     let mut repeated_probe_id: RepeatedField<String> = RepeatedField::new();
@@ -59,6 +50,9 @@ pub fn create_gather_probes_request(probe_ids: Vec<String>) -> GatherProbesReque
     request
 }
 
+/*
+ * GatherProbes Messages
+ */
 pub fn create_gather_probes_reply(probes: Vec<&Probe>, probe_ids: Vec<&String>) -> GatherProbesReply {
     let mut repeated_probe: RepeatedField<Probe> = RepeatedField::new();
     for probe in probes {
@@ -76,61 +70,6 @@ pub fn create_gather_probes_reply(probes: Vec<&Probe>, probe_ids: Vec<&String>) 
     reply
 }
 
-/*pub fn create_list_probe_ids_request(probe_priority: Option<i32>) -> ListProbeIdsRequest {
-    let mut request = ListProbeIdsRequest::new();
-    if probe_priority.is_some() {
-        request.set_probe_priority(probe_priority.unwrap());
-    }
-
-    request
-}
-
-pub fn create_list_probe_ids_reply(probe_ids: Vec<String>) -> ListProbeIdsReply {
-    let mut repeated_probe_id: RepeatedField<String> = RepeatedField::new();
-    for probe_id in probe_ids {
-        repeated_probe_id.push(probe_id);
-    }
-
-    let mut reply = ListProbeIdsReply::new();
-    reply.set_probe_id(repeated_probe_id);
-    reply
-}*/
-
-/*pub fn create_schedule_probe_request(probe_id: &str, http: bool, https: bool, host: &str, url_suffix: Option<String>, probe_interval_seconds: Option<i32>, probe_priority: Option<i32>, follow: bool) -> ScheduleProbeRequest {
-    let mut probe = Probe::new();
-    probe.set_probe_id(probe_id.to_owned());
-    probe.set_protocol(
-            if http {
-                Protocol::HTTP
-            } else if https {
-                Protocol::HTTPS
-            } else {
-                Protocol::HTTP
-            }
-        );
-
-    probe.set_host(host.to_owned());
-    if url_suffix.is_some() {
-        probe.set_url_suffix(url_suffix);
-    }
-
-    if probe_interval_seconds.is_some() {
-        probe.set_probe_interval_seconds(probe_interval_seconds.unwrap());
-    }
-
-    if probe_priority.is_some() {
-        probe.set_probe_priority(probe_priority.unwrap());
-    }
-
-    probe.set_follow_redirect(follow);
-
-    let mut request = ScheduleProbeRequest::new();
-    let mut repeated_probe = RepeatedField::new();
-    repeated_probe.push(probe);
-    request.set_probe(repeated_probe);
-    request
-}*/
-
 pub fn create_dns_probe(domain: &str, probe_interval_seconds: i32) -> Probe {
     let mut probe = Probe::new();
     probe.set_probe_interval_seconds(probe_interval_seconds);
@@ -142,6 +81,53 @@ pub fn create_dns_probe(domain: &str, probe_interval_seconds: i32) -> Probe {
     probe
 }
 
+/*
+ * Search Messages
+ */
+pub fn create_search_request(domain: &str, dns: bool, http: bool, https: bool, ping: bool, traceroute: bool) -> SearchRequest {
+    let mut request = SearchRequest::new();
+    request.set_domain(domain.to_owned());
+    
+    let mut repeated_protocol = Vec::new();
+    if dns {
+        repeated_protocol.push(Protocol::DNS);
+    }
+    
+    if http {
+        repeated_protocol.push(Protocol::HTTP);
+    }
+    
+    if https {
+        repeated_protocol.push(Protocol::HTTPS);
+    }
+    
+    if ping {
+        repeated_protocol.push(Protocol::PING);
+    }
+
+    if traceroute {
+        repeated_protocol.push(Protocol::TRACEROUTE);
+    }
+
+    request.set_protocol(repeated_protocol);
+    request
+}
+
+pub fn create_search_reply(probes: Vec<&Probe>) -> SearchReply {
+    let mut reply = SearchReply::new();
+    
+    let mut repeated_probe = RepeatedField::new();
+    for probe in probes {
+        repeated_probe.push(probe.clone());
+    }
+    reply.set_probe(repeated_probe);
+
+    reply
+}
+
+/*
+ * ScheduleProbe Messages
+ */
 pub fn create_http_probe(domain: &str, probe_interval_seconds: i32, url_suffix: Option<String>, follow: bool) -> Probe {
     let mut probe = Probe::new();
     probe.set_probe_interval_seconds(probe_interval_seconds);
@@ -173,16 +159,23 @@ pub fn create_schedule_probe_reply() -> ScheduleProbeReply {
     ScheduleProbeReply::new()
 }
 
+/*
+ * Execute Probe Functions
+ */
 pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
     let mut probe_result = ProbeResult::new();
     probe_result.set_probe_id(probe.get_probe_id().to_owned());
     probe_result.set_timestamp_sec(time::get_time().sec);
 
-    let _ = match probe.get_protocol() {
+    let result = match probe.get_protocol() {
         Protocol::DNS => execute_dns_probe(probe, &mut probe_result),
         Protocol::HTTP => execute_http_probe(probe, &mut probe_result),
         _ => Err("unsupported probe type".to_owned()),
     };
+
+    if result.is_err() {
+        println!("{:?}", result);
+    }
 
     Ok(probe_result)
 }

@@ -65,9 +65,16 @@ fn main() {
 
         println!("response: {:?}", response);
     } else if args.cmd_search {
+        let request = inquest::create_search_request(&args.arg_domain, args.flag_dns, args.flag_http, args.flag_https, args.flag_ping, args.flag_traceroute);
+        let response = client.Search(request);
 
+        println!("response: {:?}", response);
     } else if args.cmd_schedule_dns {
+        let probe = inquest::create_dns_probe(&args.arg_domain, args.flag_interval);
+        let request = inquest::create_schedule_probe_request(vec!(probe));
+        let response = client.ScheduleProbe(request);
 
+        println!("response: {:?}", response);
     } else if args.cmd_schedule_http {
         let probe = inquest::create_http_probe(&args.arg_domain, args.flag_interval, args.flag_url_suffix, args.flag_follow);
         let request = inquest::create_schedule_probe_request(vec!(probe));
@@ -75,10 +82,10 @@ fn main() {
 
         println!("response: {:?}", response);
     } else if args.cmd_schedule_https {
-
+        unimplemented!();
     } else if args.cmd_schedule_ping {
-
+        unimplemented!();
     } else if args.cmd_schedule_traceroute {
-
+        unimplemented!();
     }
 }
