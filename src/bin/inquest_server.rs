@@ -17,7 +17,7 @@ fn main() {
 
     {
         //add buckets to probe_map
-        let bucket_count = 10;
+        let bucket_count = 1000;
         let mut counter = 0;
         let delta = u64::max_value() / bucket_count;
         let mut probe_map = probe_map.write().unwrap();
@@ -235,91 +235,4 @@ impl Scheduler for SchedulerImpl {
 
         Ok(inquest::create_schedule_probe_reply())
     }
-
-    /*fn CancelProbe(&self, request: CancelProbeRequest) -> GrpcResult<CancelProbeReply> {
-        //check for a probe id
-        if !request.has_probe_id() {
-            return Err(GrpcError::Other("request field probe_id is required"));
-        }
-
-        //check for probe in probe index
-        let mut probe_index = self.probe_index.write().unwrap();
-        let (protocol, domain) = match probe_index.remove(request.get_probe_id()) {
-            Some(x) => x,
-            None => return Err(GrpcError::Other("probe does not exist")),
-        };
-
-        //remove probe if exists
-        let mut probe_map = self.probe_map.write().unwrap();
-        let mut map = probe_map.get_mut(&protocol).unwrap();
-        let mut probes = map.get_mut(&domain).unwrap();
-
-        let mut index = 0;
-        for (i, p) in probes.iter().enumerate() {
-            if p.get_probe_id() == request.get_probe_id() {
-                index = i;
-                break;
-            }
-        }
-
-        probes.remove(index);
-
-        Ok(inquest::create_cancel_probe_reply())
-    }
-
-    fn Search(&self, request: SearchRequest) -> GrpcResult<SearchReply> {
-        let mut probe_vec = Vec::new();
-        for protocol in request.get_protocol() {
-            let probe_map = self.probe_map.read().unwrap();
-            let map = match probe_map.get(protocol) {
-                Some(map) => map,
-                None => continue,
-            };
-
-            let probes = match map.get(request.get_domain()) {
-                Some(probes) => probes,
-                None => continue,
-            };
-
-            for p in probes {
-                probe_vec.push(p.clone());
-            }
-        }
-
-        Ok(inquest::create_search_reply(probe_vec))
-    }
-
-    fn ScheduleProbe(&self, request: ScheduleProbeRequest) -> GrpcResult<ScheduleProbeReply> {
-        for probe in request.get_probe() {
-            //add to probe map
-            let mut probe_map = self.probe_map.write().unwrap();
-            let mut map = probe_map.entry(probe.get_protocol()).or_insert(HashMap::new());
-            let mut probes = map.entry(probe.get_domain().to_owned()).or_insert(Vec::new());
-
-            //check if probe already exists
-            for p in probes.iter() {
-                let equality = match probe.get_protocol() {
-                    Protocol::DNS => true, //change once we have DNS for multiple record types
-                    Protocol::HTTP => probe.get_url_suffix() == p.get_url_suffix(),
-                    _ => true,
-                };
-
-                if equality {
-                    continue;
-                }
-            }
-
-            //generate probe id
-            let probe_id = Uuid::new_v4().hyphenated().to_string();
-            let mut probe = probe.clone();
-            probe.set_probe_id(probe_id.clone());
-
-            //add probe to structures
-            let mut probe_index = self.probe_index.write().unwrap();
-            probe_index.insert(probe_id, (probe.get_protocol(), probe.get_domain().to_owned()));
-            probes.push(probe);
-        }
-
-        Ok(inquest::create_schedule_probe_reply())
-    }*/
 }
