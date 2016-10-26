@@ -25,9 +25,7 @@ ability to scheudle/cancel probes, list probe ids, and describe probes.
 Simple utility tool to parse probe result protobuf files.
 
 ##TODO
-- large refactoring of server needed
-    store probes on a per protocol/per domain basis
-    gather probes needs to supply protocols it allows (additionally hash probe ids?) send a full refresh if needed
+- gather probes needs to supply protocols it allows (additionally hash probe ids?) send a full refresh if needed
 - add SSL/TLS support for inquisitor->server and prober->server communication
 - implement ping
         https://github.com/libpnet/libpnet

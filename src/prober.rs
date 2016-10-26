@@ -13,9 +13,9 @@ use time;
 use time::{Duration, Tm};
 
 pub trait Prober {
-    fn schedule_probe(&self, probe: &Probe) -> Result<(), String>;
-    fn cancel_probe(&self, probe_id: &str) -> Result<(), &str>;
-    fn get_probe_ids(&self) -> Vec<String>;
+    fn schedule_probe(&self, probe: &Probe) -> Result<(), &str>;
+    fn cancel_probe(&self, probe_id: u64) -> Result<(), &str>;
+    fn get_probe_ids(&self) -> Vec<u64>;
 }
 
 pub struct ThreadPoolProberImpl {
@@ -84,8 +84,8 @@ impl ThreadPoolProberImpl {
 }
 
 impl Prober for ThreadPoolProberImpl {
-    fn schedule_probe(&self, probe: &Probe) -> Result<(), String> {
-        //check if probe_id already exists
+    fn schedule_probe(&self, probe: &Probe) -> Result<(), &str> {
+        /*//check if probe_id already exists
         let mut probe_jobs = self.probe_jobs.write().unwrap();
         for probe_job in probe_jobs.iter() {
             if probe_job.probe.get_probe_id() == probe.get_probe_id() {
@@ -95,11 +95,12 @@ impl Prober for ThreadPoolProberImpl {
 
         //add probe to probe jobs
         probe_jobs.push(ProbeJob::new(probe.to_owned()));
-        Ok(())
+        Ok(())*/
+        Err("unimplemented!")
     }
 
-    fn cancel_probe(&self, probe_id: &str) -> Result<(), &str> {
-        //loop through probe jobs removing the probe_id
+    fn cancel_probe(&self, probe_id: u64) -> Result<(), &str> {
+        /*//loop through probe jobs removing the probe_id
         let mut probe_jobs = self.probe_jobs.write().unwrap();
         let mut _probe_jobs = BinaryHeap::new();
         for probe_job in probe_jobs.drain() {
@@ -110,10 +111,11 @@ impl Prober for ThreadPoolProberImpl {
 
         //retain correct probe jobs
         probe_jobs.append(&mut _probe_jobs);
-        Ok(())
+        Ok(())*/
+        Err("unimplemented!")
     }
 
-    fn get_probe_ids(&self) -> Vec<String> {
+    fn get_probe_ids(&self) -> Vec<u64> {
         let probe_jobs = self.probe_jobs.read().unwrap();
 
         probe_jobs.iter()

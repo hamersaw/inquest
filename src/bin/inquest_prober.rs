@@ -97,7 +97,7 @@ fn main() {
     loop {
         chan_select! {
             tick.recv() => {
-                let request = inquest::create_gather_probes_request(prober.get_probe_ids());
+                /*let request = inquest::create_gather_probes_request(prober.get_probe_ids());
                 let response = client.GatherProbes(request).unwrap();
 
                 //cancel probes
@@ -108,7 +108,7 @@ fn main() {
                 //schedule new probes
                 for probe in response.get_probe() {
                     let _ = prober.schedule_probe(probe);
-                }
+                }*/
             }
         }
     }

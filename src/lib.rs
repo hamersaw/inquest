@@ -15,6 +15,7 @@ pub mod inquest_pb_grpc;
 pub mod prober;
 pub mod writer;
 
+use std::hash::{Hash, Hasher, SipHasher};
 use std::ops::Sub;
 
 use inquest_pb::{CancelProbeRequest, GatherProbesRequest, SearchRequest, ScheduleProbeRequest};
@@ -28,9 +29,38 @@ use resolv::record::A;
 /*
  * CancelProbe Messages
  */
-pub fn create_cancel_probe_request(probe_id: &str) -> CancelProbeRequest {
+pub fn create_cancel_probe_request(domain: &str, dns: bool, http: bool, https: bool, ping: bool, traceroute: bool, url_suffix: Option<String>) -> CancelProbeRequest {
     let mut request = CancelProbeRequest::new();
-    request.set_probe_id(probe_id.to_owned());
+    request.set_domain(domain.to_owned());
+
+    let empty = !dns && !http && !https && !ping && !traceroute;
+    let mut repeated_protocol = Vec::new();
+    if empty || dns {
+        repeated_protocol.push(Protocol::DNS);
+    }
+    
+    if empty || http {
+        repeated_protocol.push(Protocol::HTTP);
+    }
+    
+    if empty || https {
+        repeated_protocol.push(Protocol::HTTPS);
+    }
+    
+    if empty || ping {
+        repeated_protocol.push(Protocol::PING);
+    }
+
+    if empty || traceroute {
+        repeated_protocol.push(Protocol::TRACEROUTE);
+    }
+
+    request.set_protocol(repeated_protocol);
+
+    if url_suffix.is_some() {
+        request.set_url_suffix(url_suffix.unwrap());
+    }
+
     request
 }
 
@@ -253,4 +283,37 @@ fn execute_http_probe(probe: &Probe, probe_result: &mut ProbeResult) -> Result<(
     }
 
     Ok(())
+}
+
+/*
+ * Compute Hashes
+ */
+//pub fn compute_probe_hash(probe: &Probe) -> u64 {
+pub fn compute_probe_hash(probe: &Probe) -> u64 {
+    match probe.get_protocol() {
+        Protocol::DNS => compute_dns_hash(probe.get_domain()),
+        Protocol::HTTP => compute_http_hash(probe.get_domain(), probe.get_url_suffix()),
+        _ => 0,
+    }
+}
+
+pub fn compute_dns_hash(domain: &str) -> u64 {
+    let mut hasher = SipHasher::new();
+    "DNS".hash(&mut hasher);
+    domain.hash(&mut hasher);
+    hasher.finish()
+}
+
+pub fn compute_http_hash(domain: &str, url_suffix: &str) -> u64 {
+    let mut hasher = SipHasher::new();
+    "HTTP".hash(&mut hasher);
+    domain.hash(&mut hasher);
+    url_suffix.hash(&mut hasher);
+    hasher.finish()
+}
+
+pub fn compute_domain_hash(domain: &str) -> u64 {
+    let mut hasher = SipHasher::new();
+    domain.hash(&mut hasher);
+    hasher.finish()
 }

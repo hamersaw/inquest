@@ -63,7 +63,7 @@ enum Protocol {
 }
 
 message Probe {
-    string probe_id = 1;
+    uint64 probe_id = 1;
     int32 probe_interval_seconds = 2;
     int32 probe_interval_post_failure_seconds = 3;
     int32 attempts_to_declare_failure = 4;
@@ -84,7 +84,7 @@ message Probe {
 }
 
 message ProbeResult {
-    string probe_id = 1;
+    uint64 probe_id = 1;
     string prober_hostname = 2;
     Protocol protocol = 3;
 
@@ -116,7 +116,10 @@ service Scheduler {
 }
 
 message CancelProbeRequest {
-    string probe_id = 1;
+    string domain = 1;
+    repeated Protocol protocol = 2;
+
+    uint64 probe_id = 3;
 }
 
 message CancelProbeReply {

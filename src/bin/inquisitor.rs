@@ -10,7 +10,7 @@ const USAGE: &'static str = "
 Client application to inquest
 
 Usage:
-    inquisitor cancel <probe-id>
+    inquisitor cancel <domain> [--dns] [--http [--url-suffix=<url-suffix>]] [--https] [--ping] [--traceroute]
     inquisitor search <domain> [--dns] [--http] [--https] [--ping] [--traceroute]
     inquisitor schedule-dns <domain> [--interval=<interval>]
     inquisitor schedule-http <domain> [--url-suffix=<url-suffix>] [--follow] [--interval=<interval>]
@@ -41,7 +41,6 @@ struct Args {
     cmd_schedule_ping: bool,
     cmd_schedule_traceroute: bool,
     arg_domain: String,
-    arg_probe_id: String,
     flag_dns: bool,
     flag_follow: bool,
     flag_http: bool,
@@ -60,7 +59,7 @@ fn main() {
     let client = SchedulerClient::new("localhost", 12289, false).unwrap();
 
     if args.cmd_cancel {
-        let request = inquest::create_cancel_probe_request(&args.arg_probe_id);
+        let request = inquest::create_cancel_probe_request(&args.arg_domain, args.flag_dns, args.flag_http, args.flag_https, args.flag_ping, args.flag_traceroute, args.flag_url_suffix);
         let response = client.CancelProbe(request);
 
         println!("response: {:?}", response);
