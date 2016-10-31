@@ -12,15 +12,15 @@ extern crate toml;
 
 pub mod inquest_pb;
 pub mod inquest_pb_grpc;
-pub mod prober;
 pub mod writer;
 
+use std::collections::{BTreeMap, HashMap};
 use std::hash::{Hash, Hasher, SipHasher};
 use std::ops::Sub;
 
 use inquest_pb::{CancelProbeRequest, GetBucketKeysRequest, GetProbesRequest, SearchRequest, ScheduleProbeRequest};
 use inquest_pb::{CancelProbeReply, GetBucketKeysReply, GetProbesReply, SearchReply, ScheduleProbeReply};
-use inquest_pb::{Probe, Protocol, ProbeResult};
+use inquest_pb::{BucketHash, BucketProbes, Probe, Protocol, ProbeResult};
 use curl::easy::Easy;
 use protobuf::RepeatedField;
 use resolv::{Resolver, Class, RecordType};
@@ -67,38 +67,6 @@ pub fn create_cancel_probe_request(domain: &str, dns: bool, http: bool, https: b
 pub fn create_cancel_probe_reply() -> CancelProbeReply {
     CancelProbeReply::new()
 }
-
-/*/*
- * GetProbes Messages
- */
-pub fn create_gather_probes_request(probe_ids: Vec<String>) -> GetProbesRequest {
-    let mut repeated_probe_id: RepeatedField<String> = RepeatedField::new();
-    for probe_id in probe_ids {
-        repeated_probe_id.push(probe_id);
-    }
-
-    let mut request = GetProbesRequest::new();
-    request.set_scheduled_probe_id(repeated_probe_id);
-
-    request
-}
-
-pub fn create_gather_probes_reply(probes: Vec<&Probe>, probe_ids: Vec<&String>) -> GetProbesReply {
-    let mut repeated_probe: RepeatedField<Probe> = RepeatedField::new();
-    for probe in probes {
-        repeated_probe.push(probe.clone());
-    }
-
-    let mut repeated_probe_id: RepeatedField<String> = RepeatedField::new();
-    for probe_id in probe_ids {
-        repeated_probe_id.push(probe_id.to_owned());
-    }
-
-    let mut reply = GetProbesReply::new();
-    reply.set_probe(repeated_probe);
-    reply.set_cancel_probe_id(repeated_probe_id);
-    reply
-}*/
 
 /*
  * Search Messages
@@ -191,7 +159,7 @@ pub fn create_schedule_probe_reply() -> ScheduleProbeReply {
 }
 
 /*
- *
+ * ProbeCache Messages
  */
 pub fn create_get_bucket_keys_request() -> GetBucketKeysRequest {
     GetBucketKeysRequest::new()
@@ -200,6 +168,40 @@ pub fn create_get_bucket_keys_request() -> GetBucketKeysRequest {
 pub fn create_get_bucket_keys_reply(bucket_keys: Vec<u64>) -> GetBucketKeysReply {
     let mut reply = GetBucketKeysReply::new();
     reply.set_bucket_key(bucket_keys);
+    reply
+}
+
+pub fn create_get_probes_request(bucket_hashes: HashMap<u64, u64>) -> GetProbesRequest {
+    let mut repeated_bucket_hash = RepeatedField::new();
+    for (key, value) in bucket_hashes {
+        let mut bucket_hash = BucketHash::new();
+        bucket_hash.set_bucket_key(key);
+        bucket_hash.set_hash(value);
+        repeated_bucket_hash.push(bucket_hash);
+    }
+
+    let mut request = GetProbesRequest::new();
+    request.set_bucket_hash(repeated_bucket_hash);
+    request
+}
+
+pub fn create_get_probes_reply(bucket_probes: HashMap<u64, Vec<Probe>>) -> GetProbesReply {
+    let mut repeated_bucket_probe = RepeatedField::new();
+    for (key, value) in bucket_probes {
+        let mut bucket_probe = BucketProbes::new();
+        bucket_probe.set_bucket_key(key);
+        
+        let mut repeated_probe = RepeatedField::new();
+        for probe in value {
+            repeated_probe.push(probe);
+        }
+        bucket_probe.set_probe(repeated_probe);
+
+        repeated_bucket_probe.push(bucket_probe);
+    }
+
+    let mut reply = GetProbesReply::new();
+    reply.set_bucket_probes(repeated_bucket_probe);
     reply
 }
 
@@ -329,4 +331,40 @@ pub fn compute_domain_hash(domain: &str) -> u64 {
     let mut hasher = SipHasher::new();
     domain.hash(&mut hasher);
     hasher.finish()
+}
+
+pub fn compute_server_bucket_hashes(probe_map: &BTreeMap<u64, HashMap<String, HashMap<Protocol, Vec<Probe>>>>) -> HashMap<u64, u64> {
+    let mut bucket_hashes = HashMap::new();
+
+    for (bucket_key, domain_map) in probe_map {
+        let mut hasher = SipHasher::new();
+        for protocol_map in domain_map.values() {
+            for probes in protocol_map.values() {
+                for probe in probes {
+                    probe.get_probe_id().hash(&mut hasher);
+                }
+            }
+        }
+
+        bucket_hashes.insert(*bucket_key, hasher.finish());
+    }
+
+    bucket_hashes
+}
+
+pub fn compute_prober_bucket_hashes(probe_map: &BTreeMap<u64, HashMap<String, Vec<Probe>>>) -> HashMap<u64, u64> {
+    let mut bucket_hashes = HashMap::new();
+
+    for (bucket_key, domain_map) in probe_map {
+        let mut hasher = SipHasher::new();
+        for probes in domain_map.values() {
+            for probe in probes {
+                probe.get_probe_id().hash(&mut hasher);
+            }
+        }
+
+        bucket_hashes.insert(*bucket_key, hasher.finish());
+    }
+
+    bucket_hashes
 }

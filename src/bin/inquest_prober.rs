@@ -6,11 +6,14 @@ extern crate threadpool;
 extern crate time;
 extern crate toml;
 
+use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
+use std::hash::{Hash, Hasher, SipHasher};
 use std::io::Read;
+use std::sync::{Arc, RwLock};
 
+use inquest::inquest_pb::{Probe};
 use inquest::inquest_pb_grpc::{ProbeCache, ProbeCacheClient};
-use inquest::prober::{Prober, ThreadPoolProberImpl};
 use inquest::writer::{FileWriter, PrintWriter, Writer};
 use toml::Parser;
 use toml::Value::Table;
@@ -81,10 +84,37 @@ fn main() {
 
     //open client
     let client = ProbeCacheClient::new(host, port, false).unwrap();
+    let probe_map: Arc<RwLock<BTreeMap<u64, HashMap<String, Vec<Probe>>>>> = Arc::new(RwLock::new(BTreeMap::new())); //map<domain_hash, map<domain, vec<probe>>>
 
-    //get time buckets
+    //get bucket keys
     let request = inquest::create_get_bucket_keys_request();
     let response = client.GetBucketKeys(request).unwrap();
+
+    {
+        let mut probe_map = probe_map.write().unwrap();
+        for bucket_key in response.get_bucket_key() {
+            probe_map.insert(*bucket_key, HashMap::new());
+        }
+    }
+
+    //add initial probes to bucket
+    let bucket_hashes;
+    {
+        let probe_map = probe_map.read().unwrap();
+        bucket_hashes = inquest::compute_prober_bucket_hashes(&probe_map);
+    }
+
+    let request = inquest::create_get_probes_request(bucket_hashes);
+    let response = client.GetProbes(request).unwrap();
+
+    //TMP print off probes to add
+    for bucket_probes in response.get_bucket_probes() {
+        println!("bucket_key:{}", bucket_probes.get_bucket_key());
+
+        for probe in bucket_probes.get_probe() {
+            println!("\t{:?}", probe);
+        }
+    }
     
     /*let prober = ThreadPoolProberImpl::new(writer, prober_hostname, probe_threads);
 
@@ -120,3 +150,4 @@ fn main() {
         }
     }*/
 }
+

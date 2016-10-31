@@ -27,7 +27,7 @@ fn main() {
         }
     }
 
-    let _probe_cache_server = ProbeCacheServer::new(52890, ProbeCacheImpl::new(Arc::new(RwLock::new(HashMap::new()))));
+    let _probe_cache_server = ProbeCacheServer::new(52890, ProbeCacheImpl::new(probe_map.clone()));
     let _scheduler_server = SchedulerServer::new(12289, SchedulerImpl::new(probe_map.clone()));
 
     loop {
@@ -36,11 +36,11 @@ fn main() {
 }
 
 struct ProbeCacheImpl {
-    probe_map: Arc<RwLock<HashMap<String, Probe>>>,
+    probe_map: Arc<RwLock<BTreeMap<u64, HashMap<String, HashMap<Protocol, Vec<Probe>>>>>>, //map<domain_hash, map<domain, vec<probe>>>
 }
 
 impl ProbeCacheImpl {
-    fn new(probe_map: Arc<RwLock<HashMap<String, Probe>>>) -> ProbeCacheImpl {
+    fn new(probe_map: Arc<RwLock<BTreeMap<u64, HashMap<String, HashMap<Protocol, Vec<Probe>>>>>>) -> ProbeCacheImpl {
         ProbeCacheImpl {
             probe_map: probe_map,
         }
@@ -48,32 +48,52 @@ impl ProbeCacheImpl {
 }
 
 impl ProbeCache for ProbeCacheImpl {
-    fn GetBucketKeys(&self, request: GetBucketKeysRequest) -> GrpcResult<GetBucketKeysReply> {
-        Err(GrpcError::Other("unimplemented!"))
+    fn GetBucketKeys(&self, _: GetBucketKeysRequest) -> GrpcResult<GetBucketKeysReply> {
+        let bucket_keys;
+        {
+            let probe_map = self.probe_map.read().unwrap();
+            bucket_keys = probe_map.keys().cloned().collect();
+        }
+
+        Ok(inquest::create_get_bucket_keys_reply(bucket_keys))
     }
 
     fn GetProbes(&self, request: GetProbesRequest) -> GrpcResult<GetProbesReply> {
-        /*let probe_ids = request.get_scheduled_probe_id();
-        
-        //get all the probes where probe has priority over what is provided
-        let probe_map = self.probe_map.read().unwrap();
-        let probes = probe_map.values()
-                .filter(|probe| {
-                    for probe_id in probe_ids {
-                        if probe.get_probe_id() == probe_id {
-                            return false
+        //compute local bucket hashes
+        let bucket_hashes;
+        {
+            let probe_map = self.probe_map.read().unwrap();
+            bucket_hashes = inquest::compute_server_bucket_hashes(&probe_map);
+        }
+
+        //compare hashes
+        let mut bucket_probes = HashMap::new();
+        for bucket_hash in request.get_bucket_hash() {
+            match bucket_hashes.get(&bucket_hash.get_bucket_key()) {
+                Some(local_bucket_hash) => {
+                    //check if bucket hashes differ
+                    if bucket_hash.get_hash() != *local_bucket_hash {
+                        println!("GET LOCAL PROBES FOR BUCKET KEY:{}", bucket_hash.get_bucket_key());
+                        let reply_probes = bucket_probes.entry(*local_bucket_hash).or_insert(Vec::new());
+
+                        //add all local probes
+                        let probe_map = self.probe_map.read().unwrap();
+                        for domain_map in probe_map.get(&bucket_hash.get_bucket_key()) {
+                            for protocol_map in domain_map.values() {
+                                for probes in protocol_map.values() {
+                                    for probe in probes {
+                                        reply_probes.push(probe.clone());
+                                    }
+                                }
+                            }
                         }
                     }
+                },
+                None => continue,
+            }
+        }
 
-                    true
-                }).collect();
-
-        let cancel_probes = probe_ids.iter()
-                .filter(|probe_id| !probe_map.contains_key(probe_id.to_owned()))
-                .collect();
-
-        Ok(inquest::create_gather_probes_reply(probes, cancel_probes))*/
-        Err(GrpcError::Other("unimplemented!"))
+        Ok(inquest::create_get_probes_reply(bucket_probes))
     }
 }
 

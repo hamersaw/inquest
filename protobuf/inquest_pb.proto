@@ -110,7 +110,7 @@ message BucketProbes {
 }
 
 message GetProbesRequest {
-    repeated BucketHash bucket_entry = 1; 
+    repeated BucketHash bucket_hash = 1; 
 }
 
 message GetProbesReply {
