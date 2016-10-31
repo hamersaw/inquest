@@ -7,8 +7,8 @@ use std::sync::{Arc, RwLock};
 use grpc::error::GrpcError;
 use grpc::result::GrpcResult;
 
-use inquest::inquest_pb::{CancelProbeRequest, GatherProbesRequest, SearchRequest, ScheduleProbeRequest};
-use inquest::inquest_pb::{CancelProbeReply, GatherProbesReply, SearchReply, ScheduleProbeReply};
+use inquest::inquest_pb::{CancelProbeRequest, GetBucketKeysRequest, GetProbesRequest, SearchRequest, ScheduleProbeRequest};
+use inquest::inquest_pb::{CancelProbeReply, GetBucketKeysReply, GetProbesReply, SearchReply, ScheduleProbeReply};
 use inquest::inquest_pb::{Probe, Protocol};
 use inquest::inquest_pb_grpc::{ProbeCache, ProbeCacheServer, Scheduler, SchedulerServer};
 
@@ -48,7 +48,11 @@ impl ProbeCacheImpl {
 }
 
 impl ProbeCache for ProbeCacheImpl {
-    fn GatherProbes(&self, request: GatherProbesRequest) -> GrpcResult<GatherProbesReply> {
+    fn GetBucketKeys(&self, request: GetBucketKeysRequest) -> GrpcResult<GetBucketKeysReply> {
+        Err(GrpcError::Other("unimplemented!"))
+    }
+
+    fn GetProbes(&self, request: GetProbesRequest) -> GrpcResult<GetProbesReply> {
         /*let probe_ids = request.get_scheduled_probe_id();
         
         //get all the probes where probe has priority over what is provided

@@ -18,8 +18,8 @@ pub mod writer;
 use std::hash::{Hash, Hasher, SipHasher};
 use std::ops::Sub;
 
-use inquest_pb::{CancelProbeRequest, GatherProbesRequest, SearchRequest, ScheduleProbeRequest};
-use inquest_pb::{CancelProbeReply, GatherProbesReply, SearchReply, ScheduleProbeReply};
+use inquest_pb::{CancelProbeRequest, GetBucketKeysRequest, GetProbesRequest, SearchRequest, ScheduleProbeRequest};
+use inquest_pb::{CancelProbeReply, GetBucketKeysReply, GetProbesReply, SearchReply, ScheduleProbeReply};
 use inquest_pb::{Probe, Protocol, ProbeResult};
 use curl::easy::Easy;
 use protobuf::RepeatedField;
@@ -68,22 +68,22 @@ pub fn create_cancel_probe_reply() -> CancelProbeReply {
     CancelProbeReply::new()
 }
 
-pub fn create_gather_probes_request(probe_ids: Vec<String>) -> GatherProbesRequest {
+/*/*
+ * GetProbes Messages
+ */
+pub fn create_gather_probes_request(probe_ids: Vec<String>) -> GetProbesRequest {
     let mut repeated_probe_id: RepeatedField<String> = RepeatedField::new();
     for probe_id in probe_ids {
         repeated_probe_id.push(probe_id);
     }
 
-    let mut request = GatherProbesRequest::new();
+    let mut request = GetProbesRequest::new();
     request.set_scheduled_probe_id(repeated_probe_id);
 
     request
 }
 
-/*
- * GatherProbes Messages
- */
-pub fn create_gather_probes_reply(probes: Vec<&Probe>, probe_ids: Vec<&String>) -> GatherProbesReply {
+pub fn create_gather_probes_reply(probes: Vec<&Probe>, probe_ids: Vec<&String>) -> GetProbesReply {
     let mut repeated_probe: RepeatedField<Probe> = RepeatedField::new();
     for probe in probes {
         repeated_probe.push(probe.clone());
@@ -94,22 +94,11 @@ pub fn create_gather_probes_reply(probes: Vec<&Probe>, probe_ids: Vec<&String>) 
         repeated_probe_id.push(probe_id.to_owned());
     }
 
-    let mut reply = GatherProbesReply::new();
+    let mut reply = GetProbesReply::new();
     reply.set_probe(repeated_probe);
     reply.set_cancel_probe_id(repeated_probe_id);
     reply
-}
-
-pub fn create_dns_probe(domain: &str, probe_interval_seconds: i32) -> Probe {
-    let mut probe = Probe::new();
-    probe.set_probe_interval_seconds(probe_interval_seconds);
-    probe.set_probe_interval_post_failure_seconds(probe_interval_seconds);
-
-    probe.set_protocol(Protocol::DNS);
-    probe.set_domain(domain.to_owned());
-
-    probe
-}
+}*/
 
 /*
  * Search Messages
@@ -159,6 +148,17 @@ pub fn create_search_reply(probes: Vec<Probe>) -> SearchReply {
 /*
  * ScheduleProbe Messages
  */
+pub fn create_dns_probe(domain: &str, probe_interval_seconds: i32) -> Probe {
+    let mut probe = Probe::new();
+    probe.set_probe_interval_seconds(probe_interval_seconds);
+    probe.set_probe_interval_post_failure_seconds(probe_interval_seconds);
+
+    probe.set_protocol(Protocol::DNS);
+    probe.set_domain(domain.to_owned());
+
+    probe
+}
+
 pub fn create_http_probe(domain: &str, probe_interval_seconds: i32, url_suffix: Option<String>, follow: bool) -> Probe {
     let mut probe = Probe::new();
     probe.set_probe_interval_seconds(probe_interval_seconds);
@@ -188,6 +188,19 @@ pub fn create_schedule_probe_request(probes: Vec<Probe>) -> ScheduleProbeRequest
 
 pub fn create_schedule_probe_reply() -> ScheduleProbeReply {
     ScheduleProbeReply::new()
+}
+
+/*
+ *
+ */
+pub fn create_get_bucket_keys_request() -> GetBucketKeysRequest {
+    GetBucketKeysRequest::new()
+}
+
+pub fn create_get_bucket_keys_reply(bucket_keys: Vec<u64>) -> GetBucketKeysReply {
+    let mut reply = GetBucketKeysReply::new();
+    reply.set_bucket_key(bucket_keys);
+    reply
 }
 
 /*

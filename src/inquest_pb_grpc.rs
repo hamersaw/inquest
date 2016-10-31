@@ -221,11 +221,15 @@ impl SchedulerAsyncServer {
 // interface
 
 pub trait ProbeCache {
-    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::GatherProbesReply>;
+    fn GetProbes(&self, p: super::inquest_pb::GetProbesRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::GetProbesReply>;
+
+    fn GetBucketKeys(&self, p: super::inquest_pb::GetBucketKeysRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::GetBucketKeysReply>;
 }
 
 pub trait ProbeCacheAsync {
-    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GatherProbesReply>;
+    fn GetProbes(&self, p: super::inquest_pb::GetProbesRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GetProbesReply>;
+
+    fn GetBucketKeys(&self, p: super::inquest_pb::GetBucketKeysRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GetBucketKeysReply>;
 }
 
 // sync client
@@ -245,8 +249,12 @@ impl ProbeCacheClient {
 }
 
 impl ProbeCache for ProbeCacheClient {
-    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::GatherProbesReply> {
-        ::futures::Future::wait(self.async_client.GatherProbes(p))
+    fn GetProbes(&self, p: super::inquest_pb::GetProbesRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::GetProbesReply> {
+        ::futures::Future::wait(self.async_client.GetProbes(p))
+    }
+
+    fn GetBucketKeys(&self, p: super::inquest_pb::GetBucketKeysRequest) -> ::grpc::result::GrpcResult<super::inquest_pb::GetBucketKeysReply> {
+        ::futures::Future::wait(self.async_client.GetBucketKeys(p))
     }
 }
 
@@ -254,7 +262,8 @@ impl ProbeCache for ProbeCacheClient {
 
 pub struct ProbeCacheAsyncClient {
     grpc_client: ::grpc::client::GrpcClient,
-    method_GatherProbes: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::GatherProbesRequest, super::inquest_pb::GatherProbesReply>>,
+    method_GetProbes: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::GetProbesRequest, super::inquest_pb::GetProbesReply>>,
+    method_GetBucketKeys: ::std::sync::Arc<::grpc::method::MethodDescriptor<super::inquest_pb::GetBucketKeysRequest, super::inquest_pb::GetBucketKeysReply>>,
 }
 
 impl ProbeCacheAsyncClient {
@@ -262,8 +271,14 @@ impl ProbeCacheAsyncClient {
         ::grpc::client::GrpcClient::new(host, port, tls).map(|c| {
             ProbeCacheAsyncClient {
                 grpc_client: c,
-                method_GatherProbes: ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
-                    name: "/ProbeCache/GatherProbes".to_string(),
+                method_GetProbes: ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
+                    name: "/ProbeCache/GetProbes".to_string(),
+                    streaming: ::grpc::method::GrpcStreaming::Unary,
+                    req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                    resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                }),
+                method_GetBucketKeys: ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
+                    name: "/ProbeCache/GetBucketKeys".to_string(),
                     streaming: ::grpc::method::GrpcStreaming::Unary,
                     req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                     resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
@@ -274,8 +289,12 @@ impl ProbeCacheAsyncClient {
 }
 
 impl ProbeCacheAsync for ProbeCacheAsyncClient {
-    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GatherProbesReply> {
-        self.grpc_client.call_unary(p, self.method_GatherProbes.clone())
+    fn GetProbes(&self, p: super::inquest_pb::GetProbesRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GetProbesReply> {
+        self.grpc_client.call_unary(p, self.method_GetProbes.clone())
+    }
+
+    fn GetBucketKeys(&self, p: super::inquest_pb::GetBucketKeysRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GetBucketKeysReply> {
+        self.grpc_client.call_unary(p, self.method_GetBucketKeys.clone())
     }
 }
 
@@ -291,10 +310,17 @@ struct ProbeCacheServerHandlerToAsync {
 }
 
 impl ProbeCacheAsync for ProbeCacheServerHandlerToAsync {
-    fn GatherProbes(&self, p: super::inquest_pb::GatherProbesRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GatherProbesReply> {
+    fn GetProbes(&self, p: super::inquest_pb::GetProbesRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GetProbesReply> {
         let h = self.handler.clone();
         ::grpc::rt::sync_to_async_unary(&self.cpupool, p, move |p| {
-            h.GatherProbes(p)
+            h.GetProbes(p)
+        })
+    }
+
+    fn GetBucketKeys(&self, p: super::inquest_pb::GetBucketKeysRequest) -> ::grpc::futures_grpc::GrpcFutureSend<super::inquest_pb::GetBucketKeysReply> {
+        let h = self.handler.clone();
+        ::grpc::rt::sync_to_async_unary(&self.cpupool, p, move |p| {
+            h.GetBucketKeys(p)
         })
     }
 }
@@ -324,14 +350,26 @@ impl ProbeCacheAsyncServer {
             vec![
                 ::grpc::server::ServerMethod::new(
                     ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
-                        name: "/ProbeCache/GatherProbes".to_string(),
+                        name: "/ProbeCache/GetProbes".to_string(),
                         streaming: ::grpc::method::GrpcStreaming::Unary,
                         req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                         resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
                     }),
                     {
                         let handler_copy = handler_arc.clone();
-                        ::grpc::server::MethodHandlerUnary::new(move |p| handler_copy.GatherProbes(p))
+                        ::grpc::server::MethodHandlerUnary::new(move |p| handler_copy.GetProbes(p))
+                    },
+                ),
+                ::grpc::server::ServerMethod::new(
+                    ::std::sync::Arc::new(::grpc::method::MethodDescriptor {
+                        name: "/ProbeCache/GetBucketKeys".to_string(),
+                        streaming: ::grpc::method::GrpcStreaming::Unary,
+                        req_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                        resp_marshaller: Box::new(::grpc::grpc_protobuf::MarshallerProtobuf),
+                    }),
+                    {
+                        let handler_copy = handler_arc.clone();
+                        ::grpc::server::MethodHandlerUnary::new(move |p| handler_copy.GetBucketKeys(p))
                     },
                 ),
             ],

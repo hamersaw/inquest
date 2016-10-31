@@ -78,8 +78,15 @@ fn main() {
         }
         _ => panic!("unknown writer type '{}'", writer_str),
     };
+
+    //open client
+    let client = ProbeCacheClient::new(host, port, false).unwrap();
+
+    //get time buckets
+    let request = inquest::create_get_bucket_keys_request();
+    let response = client.GetBucketKeys(request).unwrap();
     
-    let prober = ThreadPoolProberImpl::new(writer, prober_hostname, probe_threads);
+    /*let prober = ThreadPoolProberImpl::new(writer, prober_hostname, probe_threads);
 
     //open client and start scheduling probes
     let client = ProbeCacheClient::new(host, port, false).unwrap();
@@ -97,7 +104,7 @@ fn main() {
     loop {
         chan_select! {
             tick.recv() => {
-                /*let request = inquest::create_gather_probes_request(prober.get_probe_ids());
+                let request = inquest::create_gather_probes_request(prober.get_probe_ids());
                 let response = client.GatherProbes(request).unwrap();
 
                 //cancel probes
@@ -108,8 +115,8 @@ fn main() {
                 //schedule new probes
                 for probe in response.get_probe() {
                     let _ = prober.schedule_probe(probe);
-                }*/
+                }
             }
         }
-    }
+    }*/
 }

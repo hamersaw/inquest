@@ -3,57 +3,6 @@ syntax="proto3";
 /**
  * probe messages
  */
-/*message Probe {
-    string probe_id = 1;
-    int32 probe_priority = 2;
-    int64 version_number = 3;
-
-    enum Protocol {
-        HTTP = 0;
-        HTTPS = 1;
-        PING = 3;
-    }
-
-    Protocol protocol = 4;
-    string host = 5;
-    int32 port = 6;
-    string url_suffix = 7; 
-
-    int64 start_time_seconds = 8;
-    int32 probe_interval_seconds = 9;
-    int32 probe_interval_post_failure_seconds = 10;
-    int32 attempts_to_declare_failure = 11;
-
-    bool follow_redirect = 12;
-}
-
-message ProbeResult {
-    string probe_id = 1;
-    int64 version_number = 2;
-    string prober_hostname = 3;
-    
-    bool success = 4;
-    string error_message = 5;
-    repeated bytes dns_answer = 6;
-    repeated HostProbeResult host_probe_result = 7;
-}
-
-message HostProbeResult {
-    int64 timestamp_sec = 1;
-    int64 application_layer_latency_nanosec = 2;
-    bool success = 3;
-    string error_message = 4;
-
-    string url = 5;
-
-    int32 http_status_code = 6;
-    string http_status_message = 7;
-    int32 application_bytes_received = 8;
-}*/
-
-/**
- * probe messages
- */
 enum Protocol {
     DNS = 0;
     HTTP = 1;
@@ -119,7 +68,8 @@ message CancelProbeRequest {
     string domain = 1;
     repeated Protocol protocol = 2;
 
-    uint64 probe_id = 3;
+    //HTTP specific
+    string url_suffix = 3;
 }
 
 message CancelProbeReply {
@@ -145,14 +95,31 @@ message ScheduleProbeReply {
  * probe cache service definition
  */
 service ProbeCache {
-    rpc GatherProbes(GatherProbesRequest) returns (GatherProbesReply) {}
+    rpc GetProbes(GetProbesRequest) returns (GetProbesReply) {}
+    rpc GetBucketKeys(GetBucketKeysRequest) returns (GetBucketKeysReply) {}
 }
 
-message GatherProbesRequest {
-    repeated string scheduled_probe_id = 2;
+message BucketHash {
+    uint64 bucket_key = 1;
+    uint64 hash = 2;
 }
 
-message GatherProbesReply {
-    repeated Probe probe = 1;
-    repeated string cancel_probe_id = 2;
+message BucketProbes {
+    uint64 bucket_key = 1;
+    repeated Probe probe = 2;
+}
+
+message GetProbesRequest {
+    repeated BucketHash bucket_entry = 1; 
+}
+
+message GetProbesReply {
+    repeated BucketProbes bucket_probes = 1;
+}
+
+message GetBucketKeysRequest {
+}
+
+message GetBucketKeysReply {
+    repeated uint64 bucket_key = 1;
 }
