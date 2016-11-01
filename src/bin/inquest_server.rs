@@ -74,7 +74,7 @@ impl ProbeCache for ProbeCacheImpl {
                     }
                 }
 
-                bucket_hashes.insert(*bucket_key, hasher.finish());
+                bucket_hashes.insert(bucket_key.to_owned(), hasher.finish());
             }
         }
 
@@ -84,9 +84,8 @@ impl ProbeCache for ProbeCacheImpl {
             match bucket_hashes.get(&bucket_hash.get_bucket_key()) {
                 Some(local_bucket_hash) => {
                     //check if bucket hashes differ
-                    if bucket_hash.get_hash() != *local_bucket_hash {
-                        println!("GET LOCAL PROBES FOR BUCKET KEY:{}", bucket_hash.get_bucket_key());
-                        let reply_probes = bucket_probes.entry(*local_bucket_hash).or_insert(Vec::new());
+                    if &bucket_hash.get_hash() != local_bucket_hash {
+                        let reply_probes = bucket_probes.entry(bucket_hash.get_bucket_key()).or_insert(Vec::new());
 
                         //add all local probes
                         let probe_map = self.probe_map.read().unwrap();
