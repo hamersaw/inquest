@@ -175,8 +175,19 @@ fn get_probes(client: &ProbeCacheClient, probe_jobs: Arc<RwLock<BTreeMap<u64, Bi
         let probe_jobs = probe_jobs.read().unwrap();
         for (bucket_key, probe_jobs_heap) in probe_jobs.iter() {
             let mut hasher = SipHasher::new();
+
+            //add all probe ids to binary heap
+            let mut probe_ids = BinaryHeap::new();
             for probe_job in probe_jobs_heap {
-                probe_job.probe.get_probe_id().hash(&mut hasher);
+                probe_ids.push(probe_job.probe.get_probe_id());
+            }
+
+            //loop over probe ids in order
+            loop {
+                match probe_ids.pop() {
+                    Some(probe_id) => probe_id.hash(&mut hasher),
+                    None => break,
+                }
             }
 
             bucket_hashes.insert(*bucket_key, hasher.finish());

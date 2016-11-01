@@ -1,7 +1,7 @@
 extern crate grpc;
 extern crate inquest;
 
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BinaryHeap, HashMap, BTreeMap};
 use std::hash::{Hash, Hasher, SipHasher};
 use std::sync::{Arc, RwLock};
 
@@ -18,7 +18,7 @@ fn main() {
 
     {
         //add buckets to probe_map
-        let bucket_count = 1000;
+        let bucket_count = 10;
         let mut counter = 0;
         let delta = u64::max_value() / bucket_count;
         let mut probe_map = probe_map.write().unwrap();
@@ -66,11 +66,22 @@ impl ProbeCache for ProbeCacheImpl {
             let probe_map = self.probe_map.read().unwrap();
             for (bucket_key, domain_map) in probe_map.iter() {
                 let mut hasher = SipHasher::new();
+
+                //add all probe ids to binary heap
+                let mut probe_ids = BinaryHeap::new();
                 for protocol_map in domain_map.values() {
                     for probes in protocol_map.values() {
                         for probe in probes {
-                            probe.get_probe_id().hash(&mut hasher);
+                            probe_ids.push(probe.get_probe_id());
                         }
+                    }
+                }
+
+                //loo over probe_ids in order
+                loop {
+                    match probe_ids.pop() {
+                        Some(probe_id) => probe_id.hash(&mut hasher),
+                        None => break,
                     }
                 }
 
