@@ -127,10 +127,16 @@ fn main() {
                             if next_execution_time.le(&now) {
                                 let mut probe_job = probe_jobs.pop().unwrap();
 
-                                //submit probe execution to thread pool
+                                //initialize threadpool variables
                                 let pool_probe_job = probe_job.clone();
                                 let pool_writer = writer.clone();
                                 let pool_prober_hostname = prober_hostname.to_owned();
+
+                                //add probe job back to binary heap with increased execution time
+                                let _ = probe_job.inc_execution_time();
+                                probe_jobs.push(probe_job);
+
+                                //execute probe
                                 pool.execute(move || {
                                     match inquest::execute_probe(&pool_probe_job.probe) {
                                         Ok(mut probe_result) => {
@@ -141,10 +147,6 @@ fn main() {
                                         Err(e) => println!("ERROR: {}", e),
                                     }
                                 });
-
-                                //add probe job back to binary heap with increased execution time
-                                let _ = probe_job.inc_execution_time();
-                                probe_jobs.push(probe_job);
                             } else {
                                 break;
                             }
