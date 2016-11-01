@@ -2,6 +2,7 @@ extern crate grpc;
 extern crate inquest;
 
 use std::collections::{HashMap, BTreeMap};
+use std::hash::{Hash, Hasher, SipHasher};
 use std::sync::{Arc, RwLock};
 
 use grpc::error::GrpcError;
@@ -60,10 +61,21 @@ impl ProbeCache for ProbeCacheImpl {
 
     fn GetProbes(&self, request: GetProbesRequest) -> GrpcResult<GetProbesReply> {
         //compute local bucket hashes
-        let bucket_hashes;
+        let mut bucket_hashes = HashMap::new();
         {
             let probe_map = self.probe_map.read().unwrap();
-            bucket_hashes = inquest::compute_server_bucket_hashes(&probe_map);
+            for (bucket_key, domain_map) in probe_map.iter() {
+                let mut hasher = SipHasher::new();
+                for protocol_map in domain_map.values() {
+                    for probes in protocol_map.values() {
+                        for probe in probes {
+                            probe.get_probe_id().hash(&mut hasher);
+                        }
+                    }
+                }
+
+                bucket_hashes.insert(*bucket_key, hasher.finish());
+            }
         }
 
         //compare hashes

@@ -14,7 +14,7 @@ pub mod inquest_pb;
 pub mod inquest_pb_grpc;
 pub mod writer;
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher, SipHasher};
 use std::ops::Sub;
 
@@ -331,40 +331,4 @@ pub fn compute_domain_hash(domain: &str) -> u64 {
     let mut hasher = SipHasher::new();
     domain.hash(&mut hasher);
     hasher.finish()
-}
-
-pub fn compute_server_bucket_hashes(probe_map: &BTreeMap<u64, HashMap<String, HashMap<Protocol, Vec<Probe>>>>) -> HashMap<u64, u64> {
-    let mut bucket_hashes = HashMap::new();
-
-    for (bucket_key, domain_map) in probe_map {
-        let mut hasher = SipHasher::new();
-        for protocol_map in domain_map.values() {
-            for probes in protocol_map.values() {
-                for probe in probes {
-                    probe.get_probe_id().hash(&mut hasher);
-                }
-            }
-        }
-
-        bucket_hashes.insert(*bucket_key, hasher.finish());
-    }
-
-    bucket_hashes
-}
-
-pub fn compute_prober_bucket_hashes(probe_map: &BTreeMap<u64, HashMap<String, Vec<Probe>>>) -> HashMap<u64, u64> {
-    let mut bucket_hashes = HashMap::new();
-
-    for (bucket_key, domain_map) in probe_map {
-        let mut hasher = SipHasher::new();
-        for probes in domain_map.values() {
-            for probe in probes {
-                probe.get_probe_id().hash(&mut hasher);
-            }
-        }
-
-        bucket_hashes.insert(*bucket_key, hasher.finish());
-    }
-
-    bucket_hashes
 }

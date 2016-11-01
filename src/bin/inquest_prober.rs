@@ -6,15 +6,19 @@ extern crate threadpool;
 extern crate time;
 extern crate toml;
 
-use std::collections::{BTreeMap, HashMap};
+use std::cmp::{Ordering, PartialOrd};
+use std::collections::{BinaryHeap, BTreeMap, HashMap};
 use std::fs::File;
 use std::hash::{Hash, Hasher, SipHasher};
 use std::io::Read;
+use std::ops::Add;
 use std::sync::{Arc, RwLock};
 
 use inquest::inquest_pb::{Probe};
 use inquest::inquest_pb_grpc::{ProbeCache, ProbeCacheClient};
 use inquest::writer::{FileWriter, PrintWriter, Writer};
+use threadpool::ThreadPool;
+use time::{Duration, Tm};
 use toml::Parser;
 use toml::Value::Table;
 
@@ -82,9 +86,10 @@ fn main() {
         _ => panic!("unknown writer type '{}'", writer_str),
     };
 
-    //open client
+    //initialize prober variables
     let client = ProbeCacheClient::new(host, port, false).unwrap();
     let probe_map: Arc<RwLock<BTreeMap<u64, HashMap<String, Vec<Probe>>>>> = Arc::new(RwLock::new(BTreeMap::new())); //map<domain_hash, map<domain, vec<probe>>>
+    let probe_jobs: Arc<RwLock<BTreeMap<u64, BinaryHeap<ProbeJob>>>> = Arc::new(RwLock::new(BTreeMap::new())); //map<domain_hash, binary_heap<probe>>
 
     //get bucket keys
     let request = inquest::create_get_bucket_keys_request();
@@ -98,56 +103,147 @@ fn main() {
     }
 
     //add initial probes to bucket
-    let bucket_hashes;
-    {
-        let probe_map = probe_map.read().unwrap();
-        bucket_hashes = inquest::compute_prober_bucket_hashes(&probe_map);
-    }
-
-    let request = inquest::create_get_probes_request(bucket_hashes);
-    let response = client.GetProbes(request).unwrap();
-
-    //TMP print off probes to add
-    for bucket_probes in response.get_bucket_probes() {
-        println!("bucket_key:{}", bucket_probes.get_bucket_key());
-
-        for probe in bucket_probes.get_probe() {
-            println!("\t{:?}", probe);
-        }
-    }
+    let _ = get_probes(&client, probe_map.clone());
     
-    /*let prober = ThreadPoolProberImpl::new(writer, prober_hostname, probe_threads);
+    //start execution threadpool loop
+    std::thread::spawn(move || {
+        let pool = ThreadPool::new(probe_threads);
+        let tick = chan::tick_ms(250);
 
-    //open client and start scheduling probes
-    let client = ProbeCacheClient::new(host, port, false).unwrap();
+        loop {
+            chan_select! {
+                tick.recv() => {
+                    let now = time::now_utc();
 
-    //schedule initial probes
-    let request = inquest::create_gather_probes_request(Vec::new());
-    let response = client.GatherProbes(request).unwrap();
+                    //loop through probes while they should be executed
+                    /*let mut probe_jobs: std::sync::RwLockWriteGuard<BinaryHeap<ProbeJob>> = thread_probe_jobs.write().unwrap();
+                    loop {
+                        let next_execution_time = match probe_jobs.peek() {
+                            Some(probe_job) => probe_job.get_next_execution_time().to_owned(),
+                            None => break,
+                        };
 
-    for probe in response.get_probe() {
-        let _ = prober.schedule_probe(probe);
-    }
+                        if next_execution_time.le(&now) {
+                            let mut probe_job = probe_jobs.pop().unwrap();
+
+                            //submit probe execution to thread pool
+                            let pool_probe_job = probe_job.clone();
+                            let pool_writer = thread_writer.clone();
+                            let prober_hostname = thread_prober_hostname.clone();
+                            pool.execute(move || {
+                                match inquest::execute_probe(&pool_probe_job.probe) {
+                                    Ok(mut probe_result) => {
+                                        probe_result.set_prober_hostname(prober_hostname);
+                                        let mut writer = pool_writer.lock().unwrap();
+                                        let _ = writer.write_probe_result(&probe_result);
+                                    },
+                                    Err(e) => println!("ERROR: {}", e),
+                                }
+                            });
+
+                            //add probe job back to binary heap with increased execution time
+                            let _ = probe_job.inc_execution_time();
+                            probe_jobs.push(probe_job);
+                        } else {
+                            break;
+                        }
+                    }*/
+                }
+            }
+        }
+    });
 
     //start probe schedule poll loop
     let tick = chan::tick_ms(probe_poll_seconds * 1000);
     loop {
         chan_select! {
             tick.recv() => {
-                let request = inquest::create_gather_probes_request(prober.get_probe_ids());
-                let response = client.GatherProbes(request).unwrap();
-
-                //cancel probes
-                for probe_id in response.get_cancel_probe_id() {
-                    let _ = prober.cancel_probe(probe_id);
-                }
-
-                //schedule new probes
-                for probe in response.get_probe() {
-                    let _ = prober.schedule_probe(probe);
-                }
-            }
+                let _ = get_probes(&client, probe_map.clone());
+            },
         }
-    }*/
+    }
 }
 
+fn get_probes(client: &ProbeCacheClient, probe_map: Arc<RwLock<BTreeMap<u64, HashMap<String, Vec<Probe>>>>>) -> Result<(), String> {
+    let mut bucket_hashes = HashMap::new();
+    {
+        let probe_map = probe_map.read().unwrap();
+        for (bucket_key, domain_map) in probe_map.iter() {
+            let mut hasher = SipHasher::new();
+            for probes in domain_map.values() {
+                for probe in probes {
+                    probe.get_probe_id().hash(&mut hasher);
+                }
+            }
+
+            bucket_hashes.insert(*bucket_key, hasher.finish());
+        }
+    }
+
+    let request = inquest::create_get_probes_request(bucket_hashes);
+    let response = client.GetProbes(request).unwrap();
+
+    //loop through bucket probes and add
+    for bucket_probes in response.get_bucket_probes() {
+        let mut domain_map = HashMap::new();
+        for probe in bucket_probes.get_probe() {
+            let probes = domain_map.entry(probe.get_domain().to_owned()).or_insert(Vec::new());
+            probes.push(probe.to_owned());
+        }
+
+        {
+            let mut probe_map = probe_map.write().unwrap();
+            probe_map.insert(bucket_probes.get_bucket_key(), domain_map);
+        }
+    }
+
+    Ok(())
+}
+
+/*
+ * ProbeJob definition
+ */
+#[derive(Clone)]
+struct ProbeJob {
+    next_execution_time: Tm,
+    probe: Probe,
+}
+
+impl ProbeJob {
+    fn new(probe: Probe) -> ProbeJob {
+        ProbeJob {
+            next_execution_time: time::now_utc(),
+            probe: probe,
+        }
+    }
+
+    fn inc_execution_time(&mut self) -> Result<(), &str> {
+        let duration = Duration::seconds(self.probe.get_probe_interval_seconds() as i64);
+        self.next_execution_time = self.next_execution_time.add(duration);
+        Ok(())
+    }
+
+    fn get_next_execution_time(&self) -> &Tm {
+        &self.next_execution_time
+    }
+}
+
+impl PartialEq for ProbeJob {
+    fn eq(&self, other: &ProbeJob) -> bool {
+        self.next_execution_time == other.next_execution_time
+    }
+}
+
+impl Eq for ProbeJob {}
+
+impl Ord for ProbeJob {
+    fn cmp(&self, other: &ProbeJob) -> Ordering {
+        other.next_execution_time.cmp(&self.next_execution_time)
+    }
+}
+
+impl PartialOrd for ProbeJob {
+    fn partial_cmp(&self, other: &ProbeJob) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
