@@ -15,11 +15,11 @@ Client application to inquest
 Usage:
     inquisitor cancel --domain=<domain> [--dns] [--http [--url-suffix=<url-suffix>]] [--https] [--ping] [--traceroute]
     inquisitor search --domain=<domain> [--dns] [--http] [--https] [--ping] [--traceroute]
-    inquisitor schedule-dns (--domain=<domain> | --file=<file>) [--interval=<interval>]
-    inquisitor schedule-http (--domain=<domain> | --file=<file>) [--url-suffix=<url-suffix>] [--follow] [--interval=<interval>]
-    inquisitor schedule-https (--domain=<domain> | --file=<file>) [--url-suffix=<url-suffix>] [--follow] [--interval=<interval>]
-    inquisitor schedule-ping (--domain=<domain> | --file=<file>) [--interval=<interval>]
-    inquisitor schedule-traceroute (--domain=<domain> | --file=<file>) [--interval=<interval>]
+    inquisitor schedule-dns (--domain=<domain> | --file=<file>) [--interval=<interval>] [--timeout=<timeout>]
+    inquisitor schedule-http (--domain=<domain> | --file=<file>) [--url-suffix=<url-suffix>] [--follow] [--interval=<interval>] [--timeout=<timeout>]
+    inquisitor schedule-https (--domain=<domain> | --file=<file>) [--url-suffix=<url-suffix>] [--follow] [--interval=<interval>] [--timeout=<timeout>]
+    inquisitor schedule-ping (--domain=<domain> | --file=<file>) [--interval=<interval>] [--timeout=<timeout>]
+    inquisitor schedule-traceroute (--domain=<domain> | --file=<file>) [--interval=<interval>] [--timeout=<timeout>]
     inquisitor (-h | --help)
 
 Options:
@@ -31,6 +31,7 @@ Options:
     --https                     Search for probes using the HTTPS protocol.
     --interval=<interval>       Probe interval in seconds [default: 3600].
     --ping                      Search for probes using the PING protcol.
+    --timeout=<timeout>         Timeout for operation in seconds [default: 120].
     --traceroute                Search for probes using the TRACEROUTE protocol.
     --url-suffix=<url_suffix>   Suffix for url.
     -h --help                   Show this screen.
@@ -51,9 +52,10 @@ struct Args {
     flag_follow: bool,
     flag_http: bool,
     flag_https: bool,
-    flag_interval: i32,
+    flag_interval: u32,
     flag_ping: bool,
     flag_traceroute: bool,
+    flag_timeout: u32,
     flag_url_suffix: Option<String>,
 }
 
@@ -75,7 +77,7 @@ fn main() {
 
         println!("response: {:?}", response);
     } else if args.cmd_schedule_dns {
-        let probe = inquest::create_dns_probe(&args.flag_domain.unwrap(), args.flag_interval);
+        let probe = inquest::create_dns_probe(&args.flag_domain.unwrap(), args.flag_interval, args.flag_timeout);
         let request = inquest::create_schedule_probe_request(vec!(probe));
         let response = client.ScheduleProbe(request);
 
@@ -91,13 +93,13 @@ fn main() {
             let mut probes = Vec::new();
             let buf_reader = BufReader::new(f);
             for line in buf_reader.lines() {
-                probes.push(inquest::create_http_probe(&line.unwrap(), args.flag_interval, args.flag_url_suffix.clone(), args.flag_follow));
+                probes.push(inquest::create_http_probe(&line.unwrap(), args.flag_interval, args.flag_timeout, args.flag_url_suffix.clone(), args.flag_follow));
             }
 
             let request = inquest::create_schedule_probe_request(probes);
             response = client.ScheduleProbe(request);
         } else {
-            let probe = inquest::create_http_probe(&args.flag_domain.unwrap(), args.flag_interval, args.flag_url_suffix, args.flag_follow);
+            let probe = inquest::create_http_probe(&args.flag_domain.unwrap(), args.flag_interval, args.flag_timeout, args.flag_url_suffix, args.flag_follow);
             let request = inquest::create_schedule_probe_request(vec!(probe));
             response = client.ScheduleProbe(request);
         }

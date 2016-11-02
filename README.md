@@ -25,13 +25,11 @@ ability to scheudle/cancel probes, list probe ids, and describe probes.
 Simple utility tool to parse probe result protobuf files.
 
 ##TODO
-- remove "time" crate and use std::time instead
-- add timeout to Probe definition
 - change "response" to "reply" for rpc communication
 - add SSL/TLS support for inquisitor->server and prober->server communication
 - implement ping
-        https://github.com/libpnet/libpnet
-        https://tools.ietf.org/html/rfc792
+    https://github.com/libpnet/libpnet
+    https://tools.ietf.org/html/rfc792
 - implement traceroute
 - resolve IPv6 as well - (DNS easy)
 - make configuration server a distributed application that's fully redundant

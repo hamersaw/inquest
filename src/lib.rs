@@ -118,10 +118,10 @@ pub fn create_search_reply(probes: Vec<Probe>) -> SearchReply {
 /*
  * ScheduleProbe Messages
  */
-pub fn create_dns_probe(domain: &str, probe_interval_seconds: i32) -> Probe {
+pub fn create_dns_probe(domain: &str, probe_interval_seconds: u32, timeout_seconds: u32) -> Probe {
     let mut probe = Probe::new();
     probe.set_probe_interval_seconds(probe_interval_seconds);
-    probe.set_probe_interval_post_failure_seconds(probe_interval_seconds);
+    probe.set_timeout_seconds(timeout_seconds);
 
     probe.set_protocol(Protocol::DNS);
     probe.set_domain(domain.to_owned());
@@ -129,10 +129,10 @@ pub fn create_dns_probe(domain: &str, probe_interval_seconds: i32) -> Probe {
     probe
 }
 
-pub fn create_http_probe(domain: &str, probe_interval_seconds: i32, url_suffix: Option<String>, follow: bool) -> Probe {
+pub fn create_http_probe(domain: &str, probe_interval_seconds: u32, timeout_seconds: u32, url_suffix: Option<String>, follow: bool) -> Probe {
     let mut probe = Probe::new();
     probe.set_probe_interval_seconds(probe_interval_seconds);
-    probe.set_probe_interval_post_failure_seconds(probe_interval_seconds);
+    probe.set_timeout_seconds(timeout_seconds);
 
     probe.set_protocol(Protocol::HTTP);
     probe.set_domain(domain.to_owned());
@@ -213,8 +213,7 @@ pub fn create_get_probes_reply(bucket_probes: HashMap<u64, Vec<Probe>>) -> GetPr
 pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
     let mut probe_result = ProbeResult::new();
     probe_result.set_probe_id(probe.get_probe_id().to_owned());
-    //probe_result.set_timestamp_sec(time::get_time().sec);
-    probe_result.set_timestamp_sec(UTC::now().timestamp());
+    probe_result.set_timestamp_sec(UTC::now().timestamp() as u64);
 
     let result = match probe.get_protocol() {
         Protocol::DNS => execute_dns_probe(probe, &mut probe_result),
@@ -261,7 +260,7 @@ fn execute_http_probe(probe: &Probe, probe_result: &mut ProbeResult) -> Result<(
         //set handle parameters
         handle.url(&format!("http://www.{}/{}", probe.get_domain(), probe.get_url_suffix())).unwrap();
         handle.follow_location(probe.get_follow_redirect()).unwrap();
-        handle.timeout(Duration::from_secs(60)).unwrap();
+        handle.timeout(Duration::from_secs(probe.get_timeout_seconds() as u64)).unwrap();
 
         /*let mut list = List::new();
         list.append(format!("Host: {}", host).as_str()).unwrap();
@@ -292,11 +291,11 @@ fn execute_http_probe(probe: &Probe, probe_result: &mut ProbeResult) -> Result<(
         probe_result.set_application_layer_latency_nanosec((duration.as_secs() * 1000000000) + (duration.subsec_nanos() as u64));
     }
 
-    probe_result.set_application_bytes_received(buffer.len() as i32);
+    probe_result.set_application_bytes_received(buffer.len() as u32);
     match handle.response_code() {
         Ok(response_code) => {
             probe_result.set_success(true);
-            probe_result.set_http_status_code(response_code as i32);
+            probe_result.set_http_status_code(response_code as u32);
         },
         Err(e) => {
             probe_result.set_success(false);

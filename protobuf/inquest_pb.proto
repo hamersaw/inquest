@@ -13,9 +13,9 @@ enum Protocol {
 
 message Probe {
     uint64 probe_id = 1;
-    int32 probe_interval_seconds = 2;
-    int32 probe_interval_post_failure_seconds = 3;
-    int32 attempts_to_declare_failure = 4;
+    uint32 probe_interval_seconds = 2;
+    uint32 timeout_seconds = 3;
+    uint32 attempts_to_declare_failure = 4;
 
     Protocol protocol = 5;
     string domain = 6;
@@ -23,7 +23,7 @@ message Probe {
     //DNS specific
     
     //HTTP/HTTPS specific
-    int32 port = 7;
+    uint32 port = 7;
     string url_suffix = 8;
     bool follow_redirect = 9;
 
@@ -37,7 +37,7 @@ message ProbeResult {
     string prober_hostname = 2;
     Protocol protocol = 3;
 
-    int64 timestamp_sec = 4;
+    uint64 timestamp_sec = 4;
     bool success = 5;
     string error_message = 6;
     uint64 application_layer_latency_nanosec = 7;
@@ -46,9 +46,9 @@ message ProbeResult {
     repeated bytes dns_answer = 8;
 
     //HTTP/HTTPS specific
-    int32 http_status_code = 9;
+    uint32 http_status_code = 9;
     string http_status_message = 10;    
-    int32 application_bytes_received = 11;
+    uint32 application_bytes_received = 11;
 
     //PING specific
 
