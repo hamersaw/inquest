@@ -45,7 +45,6 @@ struct Args {
     cmd_schedule_https: bool,
     cmd_schedule_ping: bool,
     cmd_schedule_traceroute: bool,
-    //arg_domain: String,
     flag_dns: bool,
     flag_domain: Option<String>,
     flag_file: Option<String>,
@@ -97,7 +96,6 @@ fn main() {
 
             let request = inquest::create_schedule_probe_request(probes);
             response = client.ScheduleProbe(request);
-        //} else if args.flag_domain.is_some() {
         } else {
             let probe = inquest::create_http_probe(&args.flag_domain.unwrap(), args.flag_interval, args.flag_url_suffix, args.flag_follow);
             let request = inquest::create_schedule_probe_request(vec!(probe));

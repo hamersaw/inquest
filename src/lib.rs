@@ -17,6 +17,7 @@ pub mod writer;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher, SipHasher};
 use std::ops::Sub;
+use std::time::Duration;
 
 use inquest_pb::{CancelProbeRequest, GetBucketKeysRequest, GetProbesRequest, SearchRequest, ScheduleProbeRequest};
 use inquest_pb::{CancelProbeReply, GetBucketKeysReply, GetProbesReply, SearchReply, ScheduleProbeReply};
@@ -258,6 +259,7 @@ fn execute_http_probe(probe: &Probe, probe_result: &mut ProbeResult) -> Result<(
         //set handle parameters
         handle.url(&format!("http://www.{}/{}", probe.get_domain(), probe.get_url_suffix())).unwrap();
         handle.follow_location(probe.get_follow_redirect()).unwrap();
+        handle.timeout(Duration::from_secs(60)).unwrap();
 
         /*let mut list = List::new();
         list.append(format!("Host: {}", host).as_str()).unwrap();

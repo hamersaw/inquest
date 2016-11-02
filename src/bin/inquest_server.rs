@@ -18,7 +18,7 @@ fn main() {
 
     {
         //add buckets to probe_map
-        let bucket_count = 10;
+        let bucket_count = 1000;
         let mut counter = 0;
         let delta = u64::max_value() / bucket_count;
         let mut probe_map = probe_map.write().unwrap();
