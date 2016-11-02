@@ -12,7 +12,7 @@ use std::hash::{Hash, Hasher, SipHasher};
 use std::io::Read;
 use std::sync::{Arc, Mutex, RwLock};
 
-use inquest::inquest_pb::{Probe};
+use inquest::inquest_pb::{Probe, ProbeResult};
 use inquest::inquest_pb_grpc::{ProbeCache, ProbeCacheClient};
 use inquest::writer::{FileWriter, PrintWriter, Writer};
 use chrono::offset::utc::UTC;
@@ -87,6 +87,7 @@ fn main() {
     //initialize prober variables
     let client = ProbeCacheClient::new(host, port, false).unwrap();
     let probe_jobs: Arc<RwLock<BTreeMap<u64, BinaryHeap<ProbeJob>>>> = Arc::new(RwLock::new(BTreeMap::new())); //map<domain_hash, binary_heap<probe>>
+    let probe_results: Arc<RwLock<Vec<ProbeResult>>> = Arc::new(RwLock::new(Vec::new()));
 
     //get bucket keys
     let request = inquest::create_get_bucket_keys_request();
@@ -104,6 +105,7 @@ fn main() {
     
     //start execution threadpool loop
     let thread_probe_jobs = probe_jobs.clone();
+    let thread_probe_results  = probe_results.clone();
     std::thread::spawn(move || {
         let pool = ThreadPool::new(probe_threads);
         let tick = chan::tick_ms(1000);
@@ -126,6 +128,7 @@ fn main() {
                                 let mut probe_job = probe_jobs.pop().unwrap();
 
                                 //initialize threadpool variables
+                                let pool_probe_results = thread_probe_results.clone();
                                 let pool_probe_job = probe_job.clone();
                                 let pool_writer = writer.clone();
                                 let pool_prober_hostname = prober_hostname.to_owned();
@@ -139,8 +142,12 @@ fn main() {
                                     match inquest::execute_probe(&pool_probe_job.probe) {
                                         Ok(mut probe_result) => {
                                             probe_result.set_prober_hostname(pool_prober_hostname);
-                                            let mut writer = pool_writer.lock().unwrap();
-                                            let _ = writer.write_probe_result(&probe_result);
+                                            {
+                                                let mut probe_results = pool_probe_results.write().unwrap();
+                                                probe_results.push(probe_result);
+                                            }
+                                            //let mut writer = pool_writer.lock().unwrap();
+                                            //let _ = writer.write_probe_result(&probe_result);
                                         },
                                         Err(e) => println!("ERROR: {}", e),
                                     }
@@ -156,11 +163,20 @@ fn main() {
     });
 
     //start probe schedule poll loop
-    let tick = chan::tick_ms(probe_poll_seconds * 1000);
+    let get_probes_tick = chan::tick_ms(probe_poll_seconds * 1000);
+    let check_results_tick = chan::tick_ms(5 * 1000);
     loop {
         chan_select! {
-            tick.recv() => {
+            get_probes_tick.recv() => {
                 let _ = get_probes(&client, probe_jobs.clone());
+            },
+            check_results_tick.recv() => {
+                let mut probe_results = probe_results.write().unwrap();
+                if probe_results.len() >= 100 {
+                    let request = inquest::create_send_probe_results_request(&probe_results);
+                    let _ = client.SendProbeResults(request).unwrap();
+                    probe_results.clear();
+                }
             },
         }
     }

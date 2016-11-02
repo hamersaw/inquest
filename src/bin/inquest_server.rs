@@ -8,8 +8,8 @@ use std::sync::{Arc, RwLock};
 use grpc::error::GrpcError;
 use grpc::result::GrpcResult;
 
-use inquest::inquest_pb::{CancelProbeRequest, GetBucketKeysRequest, GetProbesRequest, SearchRequest, ScheduleProbeRequest};
-use inquest::inquest_pb::{CancelProbeReply, GetBucketKeysReply, GetProbesReply, SearchReply, ScheduleProbeReply};
+use inquest::inquest_pb::{CancelProbeRequest, GetBucketKeysRequest, GetProbesRequest, SearchRequest, SendProbeResultsRequest, ScheduleProbeRequest};
+use inquest::inquest_pb::{CancelProbeReply, GetBucketKeysReply, GetProbesReply, SearchReply, SendProbeResultsReply, ScheduleProbeReply};
 use inquest::inquest_pb::{Probe, Protocol};
 use inquest::inquest_pb_grpc::{ProbeCache, ProbeCacheServer, Scheduler, SchedulerServer};
 
@@ -116,6 +116,14 @@ impl ProbeCache for ProbeCacheImpl {
         }
 
         Ok(inquest::create_get_probes_reply(bucket_probes))
+    }
+
+    fn SendProbeResults(&self, request: SendProbeResultsRequest) -> GrpcResult<SendProbeResultsReply> {
+        for probe_result in request.get_probe_result() {
+            println!("{:?}", probe_result);
+        }
+
+        Ok(inquest::create_send_probe_results_reply())
     }
 }
 

@@ -97,6 +97,7 @@ message ScheduleProbeReply {
 service ProbeCache {
     rpc GetProbes(GetProbesRequest) returns (GetProbesReply) {}
     rpc GetBucketKeys(GetBucketKeysRequest) returns (GetBucketKeysReply) {}
+    rpc SendProbeResults(SendProbeResultsRequest) returns(SendProbeResultsReply) {}
 }
 
 message BucketHash {
@@ -122,4 +123,11 @@ message GetBucketKeysRequest {
 
 message GetBucketKeysReply {
     repeated uint64 bucket_key = 1;
+}
+
+message SendProbeResultsRequest {
+    repeated ProbeResult probe_result = 1;
+}
+
+message SendProbeResultsReply {
 }

@@ -18,8 +18,8 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher, SipHasher};
 use std::time::{Duration, Instant};
 
-use inquest_pb::{CancelProbeRequest, GetBucketKeysRequest, GetProbesRequest, SearchRequest, ScheduleProbeRequest};
-use inquest_pb::{CancelProbeReply, GetBucketKeysReply, GetProbesReply, SearchReply, ScheduleProbeReply};
+use inquest_pb::{CancelProbeRequest, GetBucketKeysRequest, GetProbesRequest, SearchRequest, SendProbeResultsRequest, ScheduleProbeRequest};
+use inquest_pb::{CancelProbeReply, GetBucketKeysReply, GetProbesReply, SearchReply, SendProbeResultsReply, ScheduleProbeReply};
 use inquest_pb::{BucketHash, BucketProbes, Probe, Protocol, ProbeResult};
 
 use curl::easy::Easy;
@@ -207,6 +207,21 @@ pub fn create_get_probes_reply(bucket_probes: HashMap<u64, Vec<Probe>>) -> GetPr
     reply
 }
 
+pub fn create_send_probe_results_request(probe_results: &Vec<ProbeResult>) -> SendProbeResultsRequest {
+    let mut request = SendProbeResultsRequest::new();
+
+    let mut repeated_probe_result = RepeatedField::new();
+    for probe in probe_results {
+        repeated_probe_result.push(probe.clone());
+    }
+
+    request.set_probe_result(repeated_probe_result);
+    request
+}
+
+pub fn create_send_probe_results_reply() -> SendProbeResultsReply {
+    SendProbeResultsReply::new()
+}
 /*
  * Execute Probe Functions
  */
