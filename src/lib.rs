@@ -1,12 +1,12 @@
 #[macro_use]
 extern crate chan;
+extern crate chrono;
 extern crate curl;
 extern crate grpc;
 extern crate futures;
 extern crate futures_cpupool;
 extern crate protobuf;
 extern crate resolv;
-extern crate time;
 extern crate threadpool;
 extern crate toml;
 
@@ -16,13 +16,14 @@ pub mod writer;
 
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher, SipHasher};
-use std::ops::Sub;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use inquest_pb::{CancelProbeRequest, GetBucketKeysRequest, GetProbesRequest, SearchRequest, ScheduleProbeRequest};
 use inquest_pb::{CancelProbeReply, GetBucketKeysReply, GetProbesReply, SearchReply, ScheduleProbeReply};
 use inquest_pb::{BucketHash, BucketProbes, Probe, Protocol, ProbeResult};
+
 use curl::easy::Easy;
+use chrono::offset::utc::UTC;
 use protobuf::RepeatedField;
 use resolv::{Resolver, Class, RecordType};
 use resolv::record::A;
@@ -212,7 +213,8 @@ pub fn create_get_probes_reply(bucket_probes: HashMap<u64, Vec<Probe>>) -> GetPr
 pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
     let mut probe_result = ProbeResult::new();
     probe_result.set_probe_id(probe.get_probe_id().to_owned());
-    probe_result.set_timestamp_sec(time::get_time().sec);
+    //probe_result.set_timestamp_sec(time::get_time().sec);
+    probe_result.set_timestamp_sec(UTC::now().timestamp());
 
     let result = match probe.get_protocol() {
         Protocol::DNS => execute_dns_probe(probe, &mut probe_result),
@@ -273,7 +275,8 @@ fn execute_http_probe(probe: &Probe, probe_result: &mut ProbeResult) -> Result<(
         }).unwrap();
         
         //submit request
-        let start_time = time::now_utc();
+        //let start_time = time::now_utc();
+        let instant = Instant::now();
         match transfer.perform() {
             Ok(_) => {},
             Err(e) => {
@@ -283,8 +286,10 @@ fn execute_http_probe(probe: &Probe, probe_result: &mut ProbeResult) -> Result<(
             },
         }
 
-        let execution_time = time::now_utc().sub(start_time);
-        probe_result.set_application_layer_latency_nanosec(execution_time.num_nanoseconds().unwrap());
+        //let execution_time = time::now_utc().sub(start_time);
+        //probe_result.set_application_layer_latency_nanosec(execution_time.num_nanoseconds().unwrap());
+        let duration = instant.elapsed();
+        probe_result.set_application_layer_latency_nanosec((duration.as_secs() * 1000000000) + (duration.subsec_nanos() as u64));
     }
 
     probe_result.set_application_bytes_received(buffer.len() as i32);

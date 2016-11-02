@@ -26,6 +26,7 @@ Simple utility tool to parse probe result protobuf files.
 
 ##TODO
 - remove "time" crate and use std::time instead
+- add timeout to Probe definition
 - change "response" to "reply" for rpc communication
 - add SSL/TLS support for inquisitor->server and prober->server communication
 - implement ping

@@ -1,8 +1,9 @@
 use std::fs::File;
 
 use inquest_pb::ProbeResult;
+
+use chrono::offset::utc::UTC;
 use protobuf::{CodedOutputStream, Message, ProtobufError};
-use time;
 
 pub trait Writer {
     fn write_probe_result(&mut self, probe_result: &ProbeResult) -> Result<(), ProtobufError>;
@@ -27,8 +28,10 @@ impl FileWriter {
 }
 
 fn create_file(directory: &str) -> File {
-    let tm = time::now_utc();
-    File::create(format!("{}/{}{:02}{:02}T{:02}{:02}{:02}.ipr", directory, tm.tm_year + 1900, tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec)).unwrap()
+    //let tm = time::now_utc();
+    //File::create(format!("{}/{}{:02}{:02}T{:02}{:02}{:02}.ipr", directory, tm.tm_year + 1900, tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec)).unwrap()
+
+    File::create(format!("{}/{}.prd", directory, UTC::now().to_rfc3339())).unwrap()
 }
 
 impl Writer for FileWriter {

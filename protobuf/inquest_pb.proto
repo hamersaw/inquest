@@ -40,7 +40,7 @@ message ProbeResult {
     int64 timestamp_sec = 4;
     bool success = 5;
     string error_message = 6;
-    int64 application_layer_latency_nanosec = 7;
+    uint64 application_layer_latency_nanosec = 7;
 
     //DNS specific
     repeated bytes dns_answer = 8;

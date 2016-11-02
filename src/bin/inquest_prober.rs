@@ -1,9 +1,8 @@
 #[macro_use]
 extern crate chan;
+extern crate chrono;
 extern crate inquest;
-extern crate hyper;
 extern crate threadpool;
-extern crate time;
 extern crate toml;
 
 use std::cmp::{Ordering, PartialOrd};
@@ -11,14 +10,13 @@ use std::collections::{BinaryHeap, BTreeMap, HashMap};
 use std::fs::File;
 use std::hash::{Hash, Hasher, SipHasher};
 use std::io::Read;
-use std::ops::Add;
 use std::sync::{Arc, Mutex, RwLock};
 
 use inquest::inquest_pb::{Probe};
 use inquest::inquest_pb_grpc::{ProbeCache, ProbeCacheClient};
 use inquest::writer::{FileWriter, PrintWriter, Writer};
+use chrono::offset::utc::UTC;
 use threadpool::ThreadPool;
-use time::{Duration, Tm};
 use toml::Parser;
 use toml::Value::Table;
 
@@ -113,7 +111,7 @@ fn main() {
         loop {
             chan_select! {
                 tick.recv() => {
-                    let now = time::now_utc();
+                    let now = UTC::now().timestamp();
 
                     //loop through probes while they should be executed
                     let mut probe_jobs: std::sync::RwLockWriteGuard<BTreeMap<u64, BinaryHeap<ProbeJob>>> = thread_probe_jobs.write().unwrap();
@@ -218,26 +216,25 @@ fn get_probes(client: &ProbeCacheClient, probe_jobs: Arc<RwLock<BTreeMap<u64, Bi
  */
 #[derive(Clone)]
 struct ProbeJob {
-    next_execution_time: Tm,
+    next_execution_time: i64,
     probe: Probe,
 }
 
 impl ProbeJob {
     fn new(probe: Probe) -> ProbeJob {
         ProbeJob {
-            next_execution_time: time::now_utc(),
+            next_execution_time: UTC::now().timestamp(),
             probe: probe,
         }
     }
 
     fn inc_execution_time(&mut self) -> Result<(), &str> {
-        let duration = Duration::seconds(self.probe.get_probe_interval_seconds() as i64);
-        self.next_execution_time = self.next_execution_time.add(duration);
+        self.next_execution_time = self.next_execution_time + (self.probe.get_probe_interval_seconds() as i64);
         Ok(())
     }
 
-    fn get_next_execution_time(&self) -> &Tm {
-        &self.next_execution_time
+    fn get_next_execution_time(&self) -> i64 {
+        self.next_execution_time
     }
 }
 
