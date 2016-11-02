@@ -68,22 +68,22 @@ fn main() {
 
     if args.cmd_cancel {
         let request = inquest::create_cancel_probe_request(&args.flag_domain.unwrap(), args.flag_dns, args.flag_http, args.flag_https, args.flag_ping, args.flag_traceroute, args.flag_url_suffix);
-        let response = client.CancelProbe(request);
+        let reply = client.CancelProbe(request);
 
-        println!("response: {:?}", response);
+        println!("reply: {:?}", reply);
     } else if args.cmd_search {
         let request = inquest::create_search_request(&args.flag_domain.unwrap(), args.flag_dns, args.flag_http, args.flag_https, args.flag_ping, args.flag_traceroute);
-        let response = client.Search(request);
+        let reply = client.Search(request);
 
-        println!("response: {:?}", response);
+        println!("reply: {:?}", reply);
     } else if args.cmd_schedule_dns {
         let probe = inquest::create_dns_probe(&args.flag_domain.unwrap(), args.flag_interval, args.flag_timeout);
         let request = inquest::create_schedule_probe_request(vec!(probe));
-        let response = client.ScheduleProbe(request);
+        let reply = client.ScheduleProbe(request);
 
-        println!("response: {:?}", response);
+        println!("reply: {:?}", reply);
     } else if args.cmd_schedule_http {
-        let response;
+        let reply;
         if args.flag_file.is_some() {
             let f = match File::open(args.flag_file.unwrap()) {
                 Ok(f) => f,
@@ -97,14 +97,14 @@ fn main() {
             }
 
             let request = inquest::create_schedule_probe_request(probes);
-            response = client.ScheduleProbe(request);
+            reply = client.ScheduleProbe(request);
         } else {
             let probe = inquest::create_http_probe(&args.flag_domain.unwrap(), args.flag_interval, args.flag_timeout, args.flag_url_suffix, args.flag_follow);
             let request = inquest::create_schedule_probe_request(vec!(probe));
-            response = client.ScheduleProbe(request);
+            reply = client.ScheduleProbe(request);
         }
 
-        println!("response: {:?}", response);
+        println!("reply: {:?}", reply);
     } else if args.cmd_schedule_https {
         unimplemented!();
     } else if args.cmd_schedule_ping {

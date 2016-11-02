@@ -25,7 +25,6 @@ ability to scheudle/cancel probes, list probe ids, and describe probes.
 Simple utility tool to parse probe result protobuf files.
 
 ##TODO
-- change "response" to "reply" for rpc communication
 - add SSL/TLS support for inquisitor->server and prober->server communication
 - implement ping
     https://github.com/libpnet/libpnet

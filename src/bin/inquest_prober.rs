@@ -90,11 +90,11 @@ fn main() {
 
     //get bucket keys
     let request = inquest::create_get_bucket_keys_request();
-    let response = client.GetBucketKeys(request).unwrap();
+    let reply = client.GetBucketKeys(request).unwrap();
 
     {
         let mut probe_jobs = probe_jobs.write().unwrap();
-        for bucket_key in response.get_bucket_key() {
+        for bucket_key in reply.get_bucket_key() {
             probe_jobs.insert(*bucket_key, BinaryHeap::new());
         }
     }
@@ -193,10 +193,10 @@ fn get_probes(client: &ProbeCacheClient, probe_jobs: Arc<RwLock<BTreeMap<u64, Bi
     }
 
     let request = inquest::create_get_probes_request(bucket_hashes);
-    let response = client.GetProbes(request).unwrap();
+    let reply = client.GetProbes(request).unwrap();
 
     //loop through bucket probes and add
-    for bucket_probes in response.get_bucket_probes() {
+    for bucket_probes in reply.get_bucket_probes() {
         let mut probe_jobs_heap = BinaryHeap::new();
         for probe in bucket_probes.get_probe() {
             probe_jobs_heap.push(ProbeJob::new(probe.to_owned()));
