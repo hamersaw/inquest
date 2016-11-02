@@ -10,11 +10,10 @@ use std::collections::{BinaryHeap, BTreeMap, HashMap};
 use std::fs::File;
 use std::hash::{Hash, Hasher, SipHasher};
 use std::io::Read;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 
 use inquest::inquest_pb::{Probe, ProbeResult};
 use inquest::inquest_pb_grpc::{ProbeCache, ProbeCacheClient};
-use inquest::writer::{FileWriter, PrintWriter, Writer};
 use chrono::offset::utc::UTC;
 use threadpool::ThreadPool;
 use toml::Parser;
@@ -54,9 +53,6 @@ fn main() {
     let probe_threads = toml_table.lookup("probe_threads")
                         .expect("unable to find field 'probe_threads'")
                         .as_integer().expect("unable to parse probe_threads into integer") as usize;
-    let writer_str = toml_table.lookup("writer.type")
-                        .expect("unable to find field 'writer.type'")
-                        .as_str().expect("unable to parse writer.type into &str");
     let host = toml_table.lookup("server.host")
                         .expect("unable to find field 'server.host'")
                         .as_str().expect("unable to parse configuration_server.host into &str");
@@ -66,23 +62,6 @@ fn main() {
     let probe_poll_seconds = toml_table.lookup("server.probe_poll_seconds")
                         .expect("unable to find field 'server.probe_poll_seconds'")
                         .as_integer().expect("unable to parse server.probe_poll_seconds into integer") as u32;
-
-    //create prober
-    let writer = match writer_str {
-        "PrintWriter" => Arc::new(Mutex::new(Box::new(PrintWriter::new()) as Box<Writer + Send>)),
-        "FileWriter" => {
-            let directory = toml_table.lookup("writer.directory")
-                                .expect("unable to find field 'writer.directory'")
-                                .as_str().expect("unable to parse writer.directory into &str");
-
-            let max_filesize = toml_table.lookup("writer.max_filesize")
-                                .expect("unable to find field 'writer.max_filesize'")
-                                .as_integer().expect("unable to parse writer.max_filesize into integer") as u32;
-
-            Arc::new(Mutex::new(Box::new(FileWriter::new(directory, max_filesize)) as Box<Writer + Send>))
-        }
-        _ => panic!("unknown writer type '{}'", writer_str),
-    };
 
     //initialize prober variables
     let client = ProbeCacheClient::new(host, port, false).unwrap();
@@ -130,7 +109,6 @@ fn main() {
                                 //initialize threadpool variables
                                 let pool_probe_results = thread_probe_results.clone();
                                 let pool_probe_job = probe_job.clone();
-                                let pool_writer = writer.clone();
                                 let pool_prober_hostname = prober_hostname.to_owned();
 
                                 //add probe job back to binary heap with increased execution time
@@ -142,12 +120,9 @@ fn main() {
                                     match inquest::execute_probe(&pool_probe_job.probe) {
                                         Ok(mut probe_result) => {
                                             probe_result.set_prober_hostname(pool_prober_hostname);
-                                            {
-                                                let mut probe_results = pool_probe_results.write().unwrap();
-                                                probe_results.push(probe_result);
-                                            }
-                                            //let mut writer = pool_writer.lock().unwrap();
-                                            //let _ = writer.write_probe_result(&probe_result);
+
+                                            let mut probe_results = pool_probe_results.write().unwrap();
+                                            probe_results.push(probe_result);
                                         },
                                         Err(e) => println!("ERROR: {}", e),
                                     }

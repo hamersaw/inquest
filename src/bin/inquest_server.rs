@@ -1,9 +1,12 @@
 extern crate grpc;
 extern crate inquest;
+extern crate toml;
 
 use std::collections::{BinaryHeap, HashMap, BTreeMap};
+use std::fs::File;
 use std::hash::{Hash, Hasher, SipHasher};
-use std::sync::{Arc, RwLock};
+use std::io::Read;
+use std::sync::{Arc, Mutex, RwLock};
 
 use grpc::error::GrpcError;
 use grpc::result::GrpcResult;
@@ -12,13 +15,68 @@ use inquest::inquest_pb::{CancelProbeRequest, GetBucketKeysRequest, GetProbesReq
 use inquest::inquest_pb::{CancelProbeReply, GetBucketKeysReply, GetProbesReply, SearchReply, SendProbeResultsReply, ScheduleProbeReply};
 use inquest::inquest_pb::{Probe, Protocol};
 use inquest::inquest_pb_grpc::{ProbeCache, ProbeCacheServer, Scheduler, SchedulerServer};
+use inquest::writer::{FileWriter, PrintWriter, Writer};
+use toml::Parser;
+use toml::Value::Table;
 
 fn main() {
+    //read arguments
+    let mut args = std::env::args();
+    if args.len() != 2 {
+        panic!("Usage: {} <configuration-filename>", args.nth(0).unwrap());
+    }
+
+    //read toml configuration file
+    let mut input = String::new();
+    let filename = args.nth(1).unwrap();
+    File::open(&filename).and_then(|mut f| {
+        f.read_to_string(&mut input)
+    }).unwrap();
+
+    //parse into toml table
+    let mut parser = Parser::new(&input);
+    let toml = match parser.parse() {
+        Some(toml) => toml,
+        None => {
+            for err in &parser.errors {
+                println!("unable to parse configuration server:{} {:?} - {:?} : '{}'", filename, parser.to_linecol(err.lo), parser.to_linecol(err.hi), err.desc);
+            }
+            return
+        }
+    };
+
+    //parse toml values
+    let toml_table = Table(toml);
+    let writer_str = toml_table.lookup("writer.type")
+                        .expect("unable to find field 'writer.type'")
+                        .as_str().expect("unable to parse writer.type into &str");
+    let bucket_count = toml_table.lookup("bucket_count")
+                        .expect("unable to find field 'bucket_count'")
+                        .as_integer().expect("unable to parse bucket_count into integer") as u64;
+
+    //create prober
+    let writer = match writer_str {
+        "PrintWriter" => Arc::new(Mutex::new(Box::new(PrintWriter::new()) as Box<Writer + Send>)),
+        "FileWriter" => {
+            let directory = toml_table.lookup("writer.directory")
+                                .expect("unable to find field 'writer.directory'")
+                                .as_str().expect("unable to parse writer.directory into &str");
+
+            let max_filesize = toml_table.lookup("writer.max_filesize")
+                                .expect("unable to find field 'writer.max_filesize'")
+                                .as_integer().expect("unable to parse writer.max_filesize into integer") as u32;
+
+            Arc::new(Mutex::new(Box::new(FileWriter::new(directory, max_filesize)) as Box<Writer + Send>))
+        }
+        _ => panic!("unknown writer type '{}'", writer_str),
+    };
+
+    //intialize server variables
     let probe_map = Arc::new(RwLock::new(BTreeMap::new()));
 
     {
         //add buckets to probe_map
-        let bucket_count = 1000;
+        let bucket_count = bucket_count;
         let mut counter = 0;
         let delta = u64::max_value() / bucket_count;
         let mut probe_map = probe_map.write().unwrap();
@@ -28,7 +86,7 @@ fn main() {
         }
     }
 
-    let _probe_cache_server = ProbeCacheServer::new(52890, ProbeCacheImpl::new(probe_map.clone()));
+    let _probe_cache_server = ProbeCacheServer::new(52890, ProbeCacheImpl::new(probe_map.clone(), writer));
     let _scheduler_server = SchedulerServer::new(12289, SchedulerImpl::new(probe_map.clone()));
 
     loop {
@@ -38,12 +96,14 @@ fn main() {
 
 struct ProbeCacheImpl {
     probe_map: Arc<RwLock<BTreeMap<u64, HashMap<String, HashMap<Protocol, Vec<Probe>>>>>>, //map<domain_hash, map<domain, vec<probe>>>
+    writer: Arc<Mutex<Box<Writer + Send>>>,
 }
 
 impl ProbeCacheImpl {
-    fn new(probe_map: Arc<RwLock<BTreeMap<u64, HashMap<String, HashMap<Protocol, Vec<Probe>>>>>>) -> ProbeCacheImpl {
+    fn new(probe_map: Arc<RwLock<BTreeMap<u64, HashMap<String, HashMap<Protocol, Vec<Probe>>>>>>, writer: Arc<Mutex<Box<Writer + Send>>>) -> ProbeCacheImpl {
         ProbeCacheImpl {
             probe_map: probe_map,
+            writer: writer,
         }
     }
 }
@@ -119,8 +179,9 @@ impl ProbeCache for ProbeCacheImpl {
     }
 
     fn SendProbeResults(&self, request: SendProbeResultsRequest) -> GrpcResult<SendProbeResultsReply> {
+        let mut writer = self.writer.lock().unwrap();
         for probe_result in request.get_probe_result() {
-            println!("{:?}", probe_result);
+            let _ = writer.write_probe_result(probe_result);
         }
 
         Ok(inquest::create_send_probe_results_reply())
