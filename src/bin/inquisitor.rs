@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 use docopt::Docopt;
-use inquest::inquest_pb_grpc::{Scheduler, SchedulerClient};
+use inquest::pb::proddle_grpc::{Scheduler, SchedulerClient};
 
 const USAGE: &'static str = "
 Client application to inquest

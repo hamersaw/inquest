@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use inquest_pb::ProbeResult;
+use pb::proddle::ProbeResult;
 
 use chrono::offset::utc::UTC;
 use protobuf::{CodedOutputStream, Message, ProtobufError};

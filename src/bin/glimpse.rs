@@ -6,7 +6,7 @@ extern crate rustc_serialize;
 use std::fs::File;
 
 use docopt::Docopt;
-use inquest::inquest_pb::ProbeResult;
+use inquest::pb::proddle::ProbeResult;
 use protobuf::{CodedInputStream, Message};
 
 const USAGE: &'static str = "

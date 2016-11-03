@@ -10,17 +10,16 @@ extern crate resolv;
 extern crate threadpool;
 extern crate toml;
 
-pub mod inquest_pb;
-pub mod inquest_pb_grpc;
+pub mod pb;
 pub mod writer;
 
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher, SipHasher};
 use std::time::{Duration, Instant};
 
-use inquest_pb::{CancelProbeRequest, GetBucketKeysRequest, GetProbesRequest, SearchRequest, SendProbeResultsRequest, ScheduleProbeRequest};
-use inquest_pb::{CancelProbeReply, GetBucketKeysReply, GetProbesReply, SearchReply, SendProbeResultsReply, ScheduleProbeReply};
-use inquest_pb::{BucketHash, BucketProbes, Probe, Protocol, ProbeResult};
+use pb::proddle::{CancelProbeRequest, GetBucketKeysRequest, GetProbesRequest, SearchRequest, SendProbeResultsRequest, ScheduleProbeRequest};
+use pb::proddle::{CancelProbeReply, GetBucketKeysReply, GetProbesReply, SearchReply, SendProbeResultsReply, ScheduleProbeReply};
+use pb::proddle::{BucketHash, BucketProbes, Probe, Protocol, ProbeResult};
 
 use curl::easy::Easy;
 use chrono::offset::utc::UTC;

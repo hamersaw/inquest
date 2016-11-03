@@ -11,10 +11,10 @@ use std::sync::{Arc, Mutex, RwLock};
 use grpc::error::GrpcError;
 use grpc::result::GrpcResult;
 
-use inquest::inquest_pb::{CancelProbeRequest, GetBucketKeysRequest, GetProbesRequest, SearchRequest, SendProbeResultsRequest, ScheduleProbeRequest};
-use inquest::inquest_pb::{CancelProbeReply, GetBucketKeysReply, GetProbesReply, SearchReply, SendProbeResultsReply, ScheduleProbeReply};
-use inquest::inquest_pb::{Probe, Protocol};
-use inquest::inquest_pb_grpc::{ProbeCache, ProbeCacheServer, Scheduler, SchedulerServer};
+use inquest::pb::proddle::{CancelProbeRequest, GetBucketKeysRequest, GetProbesRequest, SearchRequest, SendProbeResultsRequest, ScheduleProbeRequest};
+use inquest::pb::proddle::{CancelProbeReply, GetBucketKeysReply, GetProbesReply, SearchReply, SendProbeResultsReply, ScheduleProbeReply};
+use inquest::pb::proddle::{Probe, Protocol};
+use inquest::pb::proddle_grpc::{ProbeCache, ProbeCacheServer, Scheduler, SchedulerServer};
 use inquest::writer::{FileWriter, PrintWriter, Writer};
 use toml::Parser;
 use toml::Value::Table;

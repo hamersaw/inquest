@@ -4,15 +4,19 @@
 A distributed service probing application. Currently supports HTTP/HTTPS.
 
 ##Compiling
-1. protoc --rust_out=src/ protobuf/*.proto
-2. protoc --rust-grpc_out=src/ protobuf/*.proto
+Note that you must have rust-protoc 
+(https://github.com/stepancheg/rust-protobuf) and rust-protoc-grpc 
+(https://github.com/stepancheg/grpc-rust) binarys installed.
+
+1. make pbinit
+2. make pbcompile
 3. cargo build
 
 ##Components
-####server
+####inquest_server
 Configuration server which acts as a passive cache to schedule/cancel probes.
 
-####prober
+####inquest_prober
 Actively submits probes to target hosts. Many instances will be deployed and
 probe results will be gather for futher analysis. Probes are scheduled/canceled
 by periodically polling the configuration server.
@@ -20,9 +24,6 @@ by periodically polling the configuration server.
 ####inquisitor
 Command line application to interact with the configuration server. Has the
 ability to scheudle/cancel probes, list probe ids, and describe probes.
-
-####glimpse
-Simple utility tool to parse probe result protobuf files.
 
 ##TODO
 - parameterize many prober & server variables

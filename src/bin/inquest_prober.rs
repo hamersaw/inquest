@@ -12,8 +12,8 @@ use std::hash::{Hash, Hasher, SipHasher};
 use std::io::Read;
 use std::sync::{Arc, RwLock};
 
-use inquest::inquest_pb::{Probe, ProbeResult};
-use inquest::inquest_pb_grpc::{ProbeCache, ProbeCacheClient};
+use inquest::pb::proddle::{Probe, ProbeResult};
+use inquest::pb::proddle_grpc::{ProbeCache, ProbeCacheClient};
 use chrono::offset::utc::UTC;
 use threadpool::ThreadPool;
 use toml::Parser;
