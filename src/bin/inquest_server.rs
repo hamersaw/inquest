@@ -86,8 +86,8 @@ fn main() {
         }
     }
 
-    let _probe_cache_server = ProbeCacheServer::new(52890, ProbeCacheImpl::new(probe_map.clone(), writer));
-    let _scheduler_server = SchedulerServer::new(12289, SchedulerImpl::new(probe_map.clone()));
+    let _probe_cache_server = ProbeCacheServer::new(52890, ProbeCacheImpl::new(probe_map.clone(), writer.clone()));
+    let _scheduler_server = SchedulerServer::new(12289, SchedulerImpl::new(probe_map.clone(), writer.clone()));
 
     loop {
         std::thread::park();
@@ -190,12 +190,14 @@ impl ProbeCache for ProbeCacheImpl {
 
 struct SchedulerImpl {
     probe_map: Arc<RwLock<BTreeMap<u64, HashMap<String, HashMap<Protocol, Vec<Probe>>>>>>, //map<domain_hash, map<domain, vec<probe>>>
+    writer: Arc<Mutex<Box<Writer + Send>>>,
 }
 
 impl SchedulerImpl {
-    fn new(probe_map: Arc<RwLock<BTreeMap<u64, HashMap<String, HashMap<Protocol, Vec<Probe>>>>>>) -> SchedulerImpl {
+    fn new(probe_map: Arc<RwLock<BTreeMap<u64, HashMap<String, HashMap<Protocol, Vec<Probe>>>>>>, writer: Arc<Mutex<Box<Writer + Send>>>) -> SchedulerImpl {
         SchedulerImpl {
             probe_map: probe_map,
+            writer: writer,
         }
     }
 }
@@ -340,10 +342,15 @@ impl Scheduler for SchedulerImpl {
                 }
             }
 
-            //add probe if needed
             if !found {
+                //add probe
                 let mut probe = probe.clone();
                 probe.set_probe_id(probe_id);
+
+                {
+                    let mut writer = self.writer.lock().unwrap();
+                    let _ = writer.write_probe(&probe);
+                }
                 probes.push(probe);
             }
         }
