@@ -138,11 +138,8 @@ impl ProbeCache for ProbeCacheImpl {
                 }
 
                 //loo over probe_ids in order
-                loop {
-                    match probe_ids.pop() {
-                        Some(probe_id) => probe_id.hash(&mut hasher),
-                        None => break,
-                    }
+                while let Some(probe_id) = probe_ids.pop() {
+                    probe_id.hash(&mut hasher);
                 }
 
                 bucket_hashes.insert(bucket_key.to_owned(), hasher.finish());

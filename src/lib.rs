@@ -275,6 +275,7 @@ fn execute_http_probe(probe: &Probe, probe_result: &mut ProbeResult) -> Result<(
         handle.url(&format!("http://www.{}/{}", probe.get_domain(), probe.get_url_suffix())).unwrap();
         handle.follow_location(probe.get_follow_redirect()).unwrap();
         handle.timeout(Duration::from_secs(probe.get_timeout_seconds() as u64)).unwrap();
+        handle.useragent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.100 Safari/537.36").unwrap();
 
         /*let mut list = List::new();
         list.append(format!("Host: {}", host).as_str()).unwrap();
@@ -323,7 +324,6 @@ fn execute_http_probe(probe: &Probe, probe_result: &mut ProbeResult) -> Result<(
 /*
  * Compute Hashes
  */
-//pub fn compute_probe_hash(probe: &Probe) -> u64 {
 pub fn compute_probe_hash(probe: &Probe) -> u64 {
     match probe.get_protocol() {
         Protocol::DNS => compute_dns_hash(probe.get_domain()),

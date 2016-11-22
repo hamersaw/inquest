@@ -172,11 +172,8 @@ fn get_probes(client: &ProbeCacheClient, probe_jobs: Arc<RwLock<BTreeMap<u64, Bi
             }
 
             //loop over probe ids in order
-            loop {
-                match probe_ids.pop() {
-                    Some(probe_id) => probe_id.hash(&mut hasher),
-                    None => break,
-                }
+            while let Some(probe_id) = probe_ids.pop() {
+                probe_id.hash(&mut hasher);
             }
 
             bucket_hashes.insert(*bucket_key, hasher.finish());
