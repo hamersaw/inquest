@@ -1,70 +1,53 @@
 #[macro_use]
 extern crate chan;
 extern crate chrono;
+extern crate docopt;
 extern crate inquest;
+extern crate rustc_serialize;
 extern crate threadpool;
-extern crate toml;
 
 use std::cmp::{Ordering, PartialOrd};
 use std::collections::{BinaryHeap, BTreeMap, HashMap};
 use std::fs::File;
 use std::hash::{Hash, Hasher, SipHasher};
-use std::io::Read;
 use std::sync::{Arc, RwLock};
 
+use chrono::offset::utc::UTC;
+use docopt::Docopt;
 use inquest::pb::proddle::{Probe, ProbeResult};
 use inquest::pb::proddle_grpc::{ProbeCache, ProbeCacheClient};
-use chrono::offset::utc::UTC;
 use threadpool::ThreadPool;
-use toml::Parser;
-use toml::Value::Table;
+
+const USAGE: &'static str = "
+Inquest Prober
+
+Usage:
+    inquest_prober <hostname> [--server-host=<shost>] [--server-port=<sport>] [--thread-count=<thread-count>] [--probe-poll-seconds=<probe-poll-seconds>]
+
+Options:
+    -h --help                                   Display this screen.
+    --server-host=<server-host>                 Host of server to connect to [default: 127.0.0.1].
+    --server-port=<server-port>                 Port of server to connect to [default: 52890].
+    --thread-count=<thread-count>               Number of threads to use for probing pool [default: 8].
+    --probe-poll-seconds=<probe-poll-seconds>   Interval at which prober polls configuration server for probe changes. 
+";
+
+#[derive(Debug, RustcDecodable)]
+struct Args {
+    arg_hostname: String,
+    flag_server_host: String,
+    flag_server_port: u16,
+    flag_thread_count: usize,
+    flag_probe_poll_seconds: u32,
+}
 
 fn main() {
-    //read arguments
-    let mut args = std::env::args();
-    if args.len() != 2 {
-        panic!("Usage: {} <configuration-filename>", args.nth(0).unwrap());
-    }
-
-    //read toml configuration file
-    let mut input = String::new();
-    let filename = args.nth(1).unwrap();
-    File::open(&filename).and_then(|mut f| {
-        f.read_to_string(&mut input)
-    }).unwrap();
-
-    //parse into toml table
-    let mut parser = Parser::new(&input);
-    let toml = match parser.parse() {
-        Some(toml) => toml,
-        None => {
-            for err in &parser.errors {
-                println!("unable to parse configuration server:{} {:?} - {:?} : '{}'", filename, parser.to_linecol(err.lo), parser.to_linecol(err.hi), err.desc);
-            }
-            return
-        }
-    };
-
-    //parse toml values
-    let toml_table = Table(toml);
-    let prober_hostname = toml_table.lookup("prober_hostname")
-                        .expect("unable to find field 'prober_hostname'")
-                        .as_str().expect("unable to parse prober_hostname into &str").to_owned();
-    let probe_threads = toml_table.lookup("probe_threads")
-                        .expect("unable to find field 'probe_threads'")
-                        .as_integer().expect("unable to parse probe_threads into integer") as usize;
-    let host = toml_table.lookup("server.host")
-                        .expect("unable to find field 'server.host'")
-                        .as_str().expect("unable to parse configuration_server.host into &str");
-    let port = toml_table.lookup("server.port")
-                        .expect("unable to find field 'server.port'")
-                        .as_integer().expect("unable to parse configuration_server.port into integer") as u16;
-    let probe_poll_seconds = toml_table.lookup("server.probe_poll_seconds")
-                        .expect("unable to find field 'server.probe_poll_seconds'")
-                        .as_integer().expect("unable to parse server.probe_poll_seconds into integer") as u32;
+    let args: Args = Docopt::new(USAGE)
+                        .and_then(|d| d.decode())
+                        .unwrap_or_else(|e| e.exit());
 
     //initialize prober variables
-    let client = ProbeCacheClient::new(host, port, false).unwrap();
+    let client = ProbeCacheClient::new(&args.flag_server_host, args.flag_server_port, false).unwrap();
     let probe_jobs: Arc<RwLock<BTreeMap<u64, BinaryHeap<ProbeJob>>>> = Arc::new(RwLock::new(BTreeMap::new())); //map<domain_hash, binary_heap<probe>>
     let probe_results: Arc<RwLock<Vec<ProbeResult>>> = Arc::new(RwLock::new(Vec::new()));
 
@@ -85,8 +68,10 @@ fn main() {
     //start execution threadpool loop
     let thread_probe_jobs = probe_jobs.clone();
     let thread_probe_results  = probe_results.clone();
+    let thread_hostname = args.arg_hostname;
+    let thread_thread_count = args.flag_thread_count;
     std::thread::spawn(move || {
-        let pool = ThreadPool::new(probe_threads);
+        let pool = ThreadPool::new(thread_thread_count);
         let tick = chan::tick_ms(1000);
 
         loop {
@@ -109,7 +94,7 @@ fn main() {
                                 //initialize threadpool variables
                                 let pool_probe_results = thread_probe_results.clone();
                                 let pool_probe_job = probe_job.clone();
-                                let pool_prober_hostname = prober_hostname.to_owned();
+                                let pool_prober_hostname = thread_hostname.to_owned();
 
                                 //add probe job back to binary heap with increased execution time
                                 let _ = probe_job.inc_execution_time();
@@ -138,7 +123,7 @@ fn main() {
     });
 
     //start probe schedule poll loop
-    let get_probes_tick = chan::tick_ms(probe_poll_seconds * 1000);
+    let get_probes_tick = chan::tick_ms(args.flag_probe_poll_seconds * 1000);
     let check_results_tick = chan::tick_ms(5 * 1000);
     loop {
         chan_select! {
