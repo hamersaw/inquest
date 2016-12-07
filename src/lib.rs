@@ -6,15 +6,15 @@ extern crate grpc;
 extern crate futures;
 extern crate futures_cpupool;
 extern crate protobuf;
-extern crate resolv;
+//extern crate resolv;
 extern crate threadpool;
-extern crate toml;
 
 pub mod pb;
 pub mod writer;
 
 use std::collections::HashMap;
-use std::hash::{Hash, Hasher, SipHasher};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::time::{Duration, Instant};
 
 use pb::proddle::{CancelProbeRequest, GetBucketKeysRequest, GetProbesRequest, SearchRequest, SendProbeResultsRequest, ScheduleProbeRequest};
@@ -24,8 +24,8 @@ use pb::proddle::{BucketHash, BucketProbes, Probe, Protocol, ProbeResult};
 use curl::easy::Easy;
 use chrono::offset::utc::UTC;
 use protobuf::RepeatedField;
-use resolv::{Resolver, Class, RecordType};
-use resolv::record::A;
+//use resolv::{Resolver, Class, RecordType};
+//use resolv::record::A;
 
 /*
  * CancelProbe Messages
@@ -245,8 +245,12 @@ pub fn execute_probe(probe: &Probe) -> Result<ProbeResult, &str> {
 fn execute_dns_probe(probe: &Probe, probe_result: &mut ProbeResult) -> Result<(), String> {
     probe_result.set_protocol(Protocol::DNS);
 
+    //TMP
+    probe_result.set_success(false);
+    probe_result.set_error_message("unimplemented!".to_string());
+
     //DNS resolution
-    let mut resolver = Resolver::new().unwrap();
+    /*let mut resolver = Resolver::new().unwrap();
     match resolver.query(&probe.get_domain().as_bytes(), Class::IN, RecordType::A) {
         Ok(mut response) => {
             let mut repeated_dns_answer = RepeatedField::new();
@@ -261,7 +265,7 @@ fn execute_dns_probe(probe: &Probe, probe_result: &mut ProbeResult) -> Result<()
             probe_result.set_success(false);
             probe_result.set_error_message(format!("{:?}", e));
         },
-    };
+    };*/
 
     Ok(())
 }
@@ -272,7 +276,8 @@ fn execute_http_probe(probe: &Probe, probe_result: &mut ProbeResult) -> Result<(
     let mut handle = Easy::new();    
     {
         //set handle parameters
-        handle.url(&format!("http://www.{}/{}", probe.get_domain(), probe.get_url_suffix())).unwrap();
+        //handle.url(&format!("http://www.{}/{}", probe.get_domain(), probe.get_url_suffix())).unwrap();
+        handle.url(&format!("{}/{}", probe.get_domain(), probe.get_url_suffix())).unwrap();
         handle.follow_location(probe.get_follow_redirect()).unwrap();
         handle.timeout(Duration::from_secs(probe.get_timeout_seconds() as u64)).unwrap();
         handle.useragent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.100 Safari/537.36").unwrap();
@@ -289,7 +294,6 @@ fn execute_http_probe(probe: &Probe, probe_result: &mut ProbeResult) -> Result<(
         }).unwrap();
         
         //submit request
-        //let start_time = time::now_utc();
         let instant = Instant::now();
         match transfer.perform() {
             Ok(_) => {},
@@ -300,8 +304,6 @@ fn execute_http_probe(probe: &Probe, probe_result: &mut ProbeResult) -> Result<(
             },
         }
 
-        //let execution_time = time::now_utc().sub(start_time);
-        //probe_result.set_application_layer_latency_nanosec(execution_time.num_nanoseconds().unwrap());
         let duration = instant.elapsed();
         probe_result.set_application_layer_latency_nanosec((duration.as_secs() * 1000000000) + (duration.subsec_nanos() as u64));
     }
@@ -333,14 +335,14 @@ pub fn compute_probe_hash(probe: &Probe) -> u64 {
 }
 
 pub fn compute_dns_hash(domain: &str) -> u64 {
-    let mut hasher = SipHasher::new();
+    let mut hasher = DefaultHasher::new();
     "DNS".hash(&mut hasher);
     domain.hash(&mut hasher);
     hasher.finish()
 }
 
 pub fn compute_http_hash(domain: &str, url_suffix: &str) -> u64 {
-    let mut hasher = SipHasher::new();
+    let mut hasher = DefaultHasher::new();
     "HTTP".hash(&mut hasher);
     domain.hash(&mut hasher);
     url_suffix.hash(&mut hasher);
@@ -348,7 +350,7 @@ pub fn compute_http_hash(domain: &str, url_suffix: &str) -> u64 {
 }
 
 pub fn compute_domain_hash(domain: &str) -> u64 {
-    let mut hasher = SipHasher::new();
+    let mut hasher = DefaultHasher::new();
     domain.hash(&mut hasher);
     hasher.finish()
 }

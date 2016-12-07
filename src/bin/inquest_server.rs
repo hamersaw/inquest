@@ -1,74 +1,59 @@
+extern crate docopt;
 extern crate grpc;
 extern crate inquest;
-extern crate toml;
+extern crate rustc_serialize;
 
 use std::collections::{BinaryHeap, HashMap, BTreeMap};
-use std::fs::File;
-use std::hash::{Hash, Hasher, SipHasher};
-use std::io::Read;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex, RwLock};
 
+use docopt::Docopt;
 use grpc::error::GrpcError;
 use grpc::result::GrpcResult;
-
 use inquest::pb::proddle::{CancelProbeRequest, GetBucketKeysRequest, GetProbesRequest, SearchRequest, SendProbeResultsRequest, ScheduleProbeRequest};
 use inquest::pb::proddle::{CancelProbeReply, GetBucketKeysReply, GetProbesReply, SearchReply, SendProbeResultsReply, ScheduleProbeReply};
 use inquest::pb::proddle::{Probe, Protocol};
 use inquest::pb::proddle_grpc::{ProbeCache, ProbeCacheServer, Scheduler, SchedulerServer};
 use inquest::writer::{FileWriter, PrintWriter, Writer};
-use toml::Parser;
-use toml::Value::Table;
+
+const USAGE: &'static str = "
+Inquest Server
+
+Usage:
+    inquest_server (-h | --help)
+    inquest_server (--print | --file <directory> [--max-filesize=<max-filesize>]) [--bucket-count=<bucket-count>]
+
+Options:
+    --directory=<directory>             Directory to write result files.
+    -h --help                           Display this screen.
+    --bucket-count=<bucket-count>       Number of buckets [default: 10];
+    --max-filesize=<max-filesize>       Maxiumum filesize for results files (in MB) [default: 5];
+    --print                             Print results to stdout;
+    --file                              Write results out to files.
+";
+
+#[derive(Debug, RustcDecodable)]
+struct Args {
+    arg_directory: String,
+    flag_bucket_count: u64,
+    flag_max_filesize: u32,
+    flag_print: bool,
+    flag_file: bool,
+}
 
 fn main() {
-    //read arguments
-    let mut args = std::env::args();
-    if args.len() != 2 {
-        panic!("Usage: {} <configuration-filename>", args.nth(0).unwrap());
-    }
+    let args: Args = Docopt::new(USAGE)
+                        .and_then(|d| d.decode())
+                        .unwrap_or_else(|e| e.exit());
 
-    //read toml configuration file
-    let mut input = String::new();
-    let filename = args.nth(1).unwrap();
-    File::open(&filename).and_then(|mut f| {
-        f.read_to_string(&mut input)
-    }).unwrap();
-
-    //parse into toml table
-    let mut parser = Parser::new(&input);
-    let toml = match parser.parse() {
-        Some(toml) => toml,
-        None => {
-            for err in &parser.errors {
-                println!("unable to parse configuration server:{} {:?} - {:?} : '{}'", filename, parser.to_linecol(err.lo), parser.to_linecol(err.hi), err.desc);
-            }
-            return
-        }
-    };
-
-    //parse toml values
-    let toml_table = Table(toml);
-    let writer_str = toml_table.lookup("writer.type")
-                        .expect("unable to find field 'writer.type'")
-                        .as_str().expect("unable to parse writer.type into &str");
-    let bucket_count = toml_table.lookup("bucket_count")
-                        .expect("unable to find field 'bucket_count'")
-                        .as_integer().expect("unable to parse bucket_count into integer") as u64;
-
-    //create prober
-    let writer = match writer_str {
-        "PrintWriter" => Arc::new(Mutex::new(Box::new(PrintWriter::new()) as Box<Writer + Send>)),
-        "FileWriter" => {
-            let directory = toml_table.lookup("writer.directory")
-                                .expect("unable to find field 'writer.directory'")
-                                .as_str().expect("unable to parse writer.directory into &str");
-
-            let max_filesize = toml_table.lookup("writer.max_filesize")
-                                .expect("unable to find field 'writer.max_filesize'")
-                                .as_integer().expect("unable to parse writer.max_filesize into integer") as u32;
-
-            Arc::new(Mutex::new(Box::new(FileWriter::new(directory, max_filesize)) as Box<Writer + Send>))
-        }
-        _ => panic!("unknown writer type '{}'", writer_str),
+    //initialize writer
+    let writer = if args.flag_print {
+        Arc::new(Mutex::new(Box::new(PrintWriter::new()) as Box<Writer + Send>))
+    } else if args.flag_file {
+        Arc::new(Mutex::new(Box::new(FileWriter::new(&args.arg_directory, args.flag_max_filesize)) as Box<Writer + Send>))
+    } else {
+        panic!("Unable to start inquest_server without writer type. Please specify '--print' or '--file' in arguments.");    
     };
 
     //intialize server variables
@@ -76,11 +61,10 @@ fn main() {
 
     {
         //add buckets to probe_map
-        let bucket_count = bucket_count;
         let mut counter = 0;
-        let delta = u64::max_value() / bucket_count;
+        let delta = u64::max_value() / args.flag_bucket_count;
         let mut probe_map = probe_map.write().unwrap();
-        for _ in 0..bucket_count {
+        for _ in 0..args.flag_bucket_count {
             probe_map.insert(counter, HashMap::new());
             counter += delta;
         }
@@ -125,7 +109,7 @@ impl ProbeCache for ProbeCacheImpl {
         {
             let probe_map = self.probe_map.read().unwrap();
             for (bucket_key, domain_map) in probe_map.iter() {
-                let mut hasher = SipHasher::new();
+                let mut hasher = DefaultHasher::new();
 
                 //add all probe ids to binary heap
                 let mut probe_ids = BinaryHeap::new();

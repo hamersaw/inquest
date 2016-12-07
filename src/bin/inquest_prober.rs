@@ -8,8 +8,8 @@ extern crate threadpool;
 
 use std::cmp::{Ordering, PartialOrd};
 use std::collections::{BinaryHeap, BTreeMap, HashMap};
-use std::fs::File;
-use std::hash::{Hash, Hasher, SipHasher};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::sync::{Arc, RwLock};
 
 use chrono::offset::utc::UTC;
@@ -22,6 +22,7 @@ const USAGE: &'static str = "
 Inquest Prober
 
 Usage:
+    inquest_prober (-h | --help)
     inquest_prober <hostname> [--server-host=<shost>] [--server-port=<sport>] [--thread-count=<thread-count>] [--probe-poll-seconds=<probe-poll-seconds>]
 
 Options:
@@ -148,7 +149,7 @@ fn get_probes(client: &ProbeCacheClient, probe_jobs: Arc<RwLock<BTreeMap<u64, Bi
     {
         let probe_jobs = probe_jobs.read().unwrap();
         for (bucket_key, probe_jobs_heap) in probe_jobs.iter() {
-            let mut hasher = SipHasher::new();
+            let mut hasher = DefaultHasher::new();
 
             //add all probe ids to binary heap
             let mut probe_ids = BinaryHeap::new();
