@@ -27,7 +27,7 @@ Usage:
 Options:
     --directory=<directory>             Directory to write result files.
     -h --help                           Display this screen.
-    --bucket-count=<bucket-count>       Number of buckets [default: 10];
+    --bucket-count=<bucket-count>       Number of buckets [default: 1000];
     --max-filesize=<max-filesize>       Maxiumum filesize for results files (in MB) [default: 5];
     --print                             Print results to stdout;
     --file                              Write results out to files.
@@ -51,7 +51,7 @@ fn main() {
     let writer = if args.flag_print {
         Arc::new(Mutex::new(Box::new(PrintWriter::new()) as Box<Writer + Send>))
     } else if args.flag_file {
-        Arc::new(Mutex::new(Box::new(FileWriter::new(&args.arg_directory, args.flag_max_filesize)) as Box<Writer + Send>))
+        Arc::new(Mutex::new(Box::new(FileWriter::new(&args.arg_directory, 1024 * 1024 * args.flag_max_filesize)) as Box<Writer + Send>))
     } else {
         panic!("Unable to start inquest_server without writer type. Please specify '--print' or '--file' in arguments.");    
     };

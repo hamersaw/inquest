@@ -29,8 +29,8 @@ Options:
     -h --help                                       Display this screen.
     --server-host=<server-host>                     Host of server to connect to [default: 127.0.0.1].
     --server-port=<server-port>                     Port of server to connect to [default: 52890].
-    --thread-count=<thread-count>                   Number of threads to use for probing pool [default: 8].
-    --probe-poll-seconds=<probe-poll-seconds>       Interval at which prober polls configuration server for probe changes. 
+    --thread-count=<thread-count>                   Number of threads to use for probing pool [default: 16].
+    --probe-poll-seconds=<probe-poll-seconds>       Interval at which prober polls configuration server for probe changes [default: 1200]. 
     --results-buffer-size=<results-buffer-size>     Size of results buffer for returning results to configuration server [default: 100].
 ";
 
