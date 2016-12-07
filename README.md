@@ -26,7 +26,6 @@ Command line application to interact with the configuration server. Has the
 ability to scheudle/cancel probes, list probe ids, and describe probes.
 
 ##TODO
-- parameterize many prober & server variables
 - add SSL/TLS support for inquisitor->server and prober->server communication
 - implement ping
     https://github.com/libpnet/libpnet

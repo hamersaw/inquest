@@ -23,14 +23,15 @@ Inquest Prober
 
 Usage:
     inquest_prober (-h | --help)
-    inquest_prober <hostname> [--server-host=<shost>] [--server-port=<sport>] [--thread-count=<thread-count>] [--probe-poll-seconds=<probe-poll-seconds>]
+    inquest_prober <hostname> [--server-host=<shost>] [--server-port=<sport>] [--thread-count=<thread-count>] [--probe-poll-seconds=<probe-poll-seconds>] [--results-buffer-size=<results-buffer-size>]
 
 Options:
-    -h --help                                   Display this screen.
-    --server-host=<server-host>                 Host of server to connect to [default: 127.0.0.1].
-    --server-port=<server-port>                 Port of server to connect to [default: 52890].
-    --thread-count=<thread-count>               Number of threads to use for probing pool [default: 8].
-    --probe-poll-seconds=<probe-poll-seconds>   Interval at which prober polls configuration server for probe changes. 
+    -h --help                                       Display this screen.
+    --server-host=<server-host>                     Host of server to connect to [default: 127.0.0.1].
+    --server-port=<server-port>                     Port of server to connect to [default: 52890].
+    --thread-count=<thread-count>                   Number of threads to use for probing pool [default: 8].
+    --probe-poll-seconds=<probe-poll-seconds>       Interval at which prober polls configuration server for probe changes. 
+    --results-buffer-size=<results-buffer-size>     Size of results buffer for returning results to configuration server [default: 100].
 ";
 
 #[derive(Debug, RustcDecodable)]
@@ -40,6 +41,7 @@ struct Args {
     flag_server_port: u16,
     flag_thread_count: usize,
     flag_probe_poll_seconds: u32,
+    flag_results_buffer_size: usize,
 }
 
 fn main() {
@@ -133,7 +135,7 @@ fn main() {
             },
             check_results_tick.recv() => {
                 let mut probe_results = probe_results.write().unwrap();
-                if probe_results.len() >= 100 {
+                if probe_results.len() >= args.flag_results_buffer_size {
                     let request = inquest::create_send_probe_results_request(&probe_results);
                     let _ = client.SendProbeResults(request).unwrap();
                     probe_results.clear();
@@ -196,8 +198,10 @@ struct ProbeJob {
 
 impl ProbeJob {
     fn new(probe: Probe) -> ProbeJob {
+        let now = UTC::now().timestamp();
+
         ProbeJob {
-            next_execution_time: UTC::now().timestamp(),
+            next_execution_time: now - (now % probe.get_probe_interval_seconds() as i64) + probe.get_probe_interval_seconds() as i64,
             probe: probe,
         }
     }
