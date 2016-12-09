@@ -66,7 +66,7 @@ impl Writer for FileWriter {
         }
 
         //add filesize
-        self.probe_result_filesize += 4 + probe_result.get_cached_size();
+        self.probe_result_filesize += 4 + 4 + probe_result.get_cached_size();
         if self.probe_result_filesize >= self.max_filesize {
             self.probe_result_file = create_file(&self.directory, "pdr");
             self.probe_result_filesize = 0;
